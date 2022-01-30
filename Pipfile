@@ -4,11 +4,18 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+fbpyutils = {file = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.2.0-py3-none-any.whl"}
+requests = "*"
+openpyxl = "*"
+xlrd = "*"
 
 [dev-packages]
 ipykernel = "*"
 pytest = "*"
 pytest-cov = "*"
+bandit = "*"
+flake8 = "*"
+setuptools = "*"
 
 [requires]
 python_version = "3.8"
