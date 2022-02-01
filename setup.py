@@ -136,6 +136,7 @@ setup(
         "chardet==4.0.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
         "charset-normalizer==2.0.11; python_version >= '3'",
         "click==8.0.3; python_version >= '3.6'",
+        "colorama==0.4.4; platform_system == 'Windows'",
         "et-xmlfile==1.1.0; python_version >= '3.6'",
         "idna==3.3; python_version >= '3'",
         "lxml==4.7.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
