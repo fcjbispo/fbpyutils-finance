@@ -16,6 +16,7 @@ pytest-cov = "*"
 bandit = "*"
 flake8 = "*"
 setuptools = "*"
+pipenv-setup = "*"
 
 [requires]
 python_version = "*"

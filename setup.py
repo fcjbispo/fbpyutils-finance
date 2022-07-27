@@ -130,30 +130,30 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=[
-        "beautifulsoup4==4.10.0; python_version >= '3.1'",
-        "certifi==2021.10.8",
-        "chardet==4.0.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
-        "charset-normalizer==2.0.11; python_version >= '3'",
-        "click==8.0.3; python_version >= '3.6'",
-        "colorama==0.4.4; platform_system == 'Windows'",
-        "et-xmlfile==1.1.0; python_version >= '3.6'",
-        "idna==3.3; python_version >= '3'",
-        "lxml==4.7.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
-        "numpy==1.21.4; python_version < '3.11' and python_version >= '3.7'",
-        "ofxparse==0.21",
-        "openpyxl==3.0.9",
-        "pandas==1.3.5; python_full_version >= '3.7.1'",
-        "python-dateutil==2.8.2; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
-        "python-magic==0.4.13",
-        "python-magic-win64==0.4.13",
-        "pytz==2021.3",
-        "requests==2.27.1",
-        "six==1.16.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
-        "soupsieve==2.3.1; python_version >= '3.6'",
-        "urllib3==1.26.8; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4'",
-        "xlrd==2.0.1",
-    ],  # Optional
+    install_requires=["beautifulsoup4==4.10.0; python_version >= '3.1'", "certifi==2022.6.15; python_version >= '3.6'", "chardet==4.0.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'", "charset-normalizer==2.1.0; python_version >= '3.6'", "click==8.0.3; python_version >= '3.6'", "et-xmlfile==1.1.0; python_version >= '3.6'", "idna==3.3; python_version >= '3.5'", "lxml==4.7.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'", "numpy==1.22.1; python_version >= '3.8'", 'ofxparse==0.21', 'openpyxl==3.0.9', "pandas==1.4.0; python_version >= '3.8'", "python-dateutil==2.8.2; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'", 'python-magic==0.4.13', 'python-magic-win64==0.4.13', 'pytz==2021.3', 'requests==2.28.1', "six==1.16.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'", "soupsieve==2.3.1; python_version >= '3.6'", "urllib3==1.26.11; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5' and python_version < '4'", 'xlrd==2.0.1'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+],  # Optional
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
     # syntax, for example:
@@ -173,9 +173,9 @@ setup(
     # will find and install the package correctly.
     # see https://python-packaging.readthedocs.io/en/latest/dependencies.html#packages-not-on-pypi
     #
-    dependency_links=[
-        "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.2.0-py3-none-any.whl"
-    ],
+    dependency_links=['https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.2.1-py3-none-any.whl'
+
+],
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
     # package_data={"sample": ["package_data.dat"]},  # Optional
