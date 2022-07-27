@@ -17,6 +17,7 @@ bandit = "*"
 flake8 = "*"
 setuptools = "*"
 pipenv-setup = "*"
+notebook = "*"
 
 [requires]
 python_version = "*"

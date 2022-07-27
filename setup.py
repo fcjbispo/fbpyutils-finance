@@ -180,7 +180,7 @@ setup(
     # MANIFEST.in as well.
     # package_data={"sample": ["package_data.dat"]},  # Optional
     package_data={
-        "fbpyutils-finance": [
+        "fbpyutils_finance": [
             "providers/bovespa/tabelas_anexas_bovespa.xlsx", 
             "providers/bovespa/certificates/*.pem"
         ]
