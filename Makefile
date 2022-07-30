@@ -1,7 +1,7 @@
 include .env
 
 setup:
-	pipenv --python 3.9
+	pipenv --python 3.8
 	pipenv update
 	pipenv install --dev
 

@@ -5,9 +5,6 @@ name = "pypi"
 
 [packages]
 fbpyutils = {file = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.2.1-py3-none-any.whl"}
-requests = "*"
-openpyxl = "*"
-xlrd = "*"
 
 [dev-packages]
 ipykernel = "*"

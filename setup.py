@@ -43,11 +43,11 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="1.0.1",  # Required
+    version="1.0.0",  # Required
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
     # https://packaging.python.org/specifications/core-metadata/#summary
-    description="Finance Utilities, Calculations and Data Providers",  # Optional
+    description="Finance Utilities and Calculations",  # Optional
     # This is an optional longer description of your project that represents
     # the body of text which users will see when they visit PyPI.
     #
@@ -107,7 +107,7 @@ setup(
     # project page. What does your project relate to?
     #
     # Note that this is a string of words separated by whitespace, not a list.
-    keywords="finance data-provider",  # Optional
+    keywords="finance",  # Optional
     # You can just specify package directories manually here if your project is
     # simple. Or you can use find_packages().
     #
@@ -130,8 +130,7 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=["beautifulsoup4==4.10.0; python_version >= '3.1'", "certifi==2022.6.15; python_version >= '3.6'", "chardet==4.0.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'", "charset-normalizer==2.1.0; python_version >= '3.6'", "click==8.0.3; python_version >= '3.6'", "et-xmlfile==1.1.0; python_version >= '3.6'", "idna==3.3; python_version >= '3.5'", "lxml==4.7.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'", "numpy==1.22.1; python_version >= '3.8'", 'ofxparse==0.21', 'openpyxl==3.0.9', "pandas==1.4.0; python_version >= '3.8'", "python-dateutil==2.8.2; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'", 'python-magic==0.4.13', 'python-magic-win64==0.4.13', 'pytz==2021.3', 'requests==2.28.1', "six==1.16.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'", "soupsieve==2.3.1; python_version >= '3.6'", "urllib3==1.26.11; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5' and python_version < '4'", 'xlrd==2.0.1'
-
+    install_requires=["beautifulsoup4==4.10.0; python_version >= '3.1'", "chardet==4.0.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'", "click==8.0.3; python_version >= '3.6'", "et-xmlfile==1.1.0; python_version >= '3.6'", "lxml==4.7.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'", "numpy==1.22.1; python_version >= '3.8'", 'ofxparse==0.21', "openpyxl==3.0.9; python_version >= '3.6'", "pandas==1.4.0; python_version >= '3.8'", "python-dateutil==2.8.2; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'", 'python-magic==0.4.13', 'python-magic-win64==0.4.13', 'pytz==2021.3', "six==1.16.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'", "soupsieve==2.3.1; python_version >= '3.6'", "xlrd==2.0.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5'"
 
 
 
@@ -179,12 +178,6 @@ setup(
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
     # package_data={"sample": ["package_data.dat"]},  # Optional
-    package_data={
-        "fbpyutils_finance": [
-            "providers/bovespa/tabelas_anexas_bovespa.xlsx", 
-            "providers/bovespa/certificates/*.pem"
-        ]
-    },  # Optional
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:
     # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files

@@ -43,7 +43,7 @@ def stock_adjusted_return_rate(current, previous, factor=None, dividend_yeld=Non
 
     factor = factor or 1
     dividend_yeld = dividend_yeld or 0
-    if tax is None or not tax < 0:
+    if tax is None or tax >= 0:
         tax = 2
     dividend_yeld = (dividend_yeld * abs(1 - tax))
 
