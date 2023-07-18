@@ -30,6 +30,14 @@ class FetchModes:
 
 
 class StockHistory():
+    '''
+    - Description: The  `class StockHistory`  class fetches stock history data from BOVESPA.
+    - Functionality: This class provides methods to download historical data using different periods and fetch modes and
+        return historical data as pandas dataframes.
+    - Attributes:
+    -  `download_folder`  (str): Local folder for data storage. Used do retrieve already downloaded data and/or 
+            update files with latest historic data. The data are stored as ZIP
+    '''
     _col_widths = [
         2,
         8,
