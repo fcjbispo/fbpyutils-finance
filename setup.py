@@ -43,11 +43,11 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="1.0.0",  # Required
+    version="1.1.0",  # Required
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
     # https://packaging.python.org/specifications/core-metadata/#summary
-    description="Finance Utilities and Calculations",  # Optional
+    description="Finance Utilities, Calculations and Data Providers",  # Optional
     # This is an optional longer description of your project that represents
     # the body of text which users will see when they visit PyPI.
     #
@@ -75,10 +75,10 @@ setup(
     url="https://github.com/fcjbispo/fbpyutils-finance",  # Optional
     # This should be your name or the name of the organization which owns the
     # project.
-    author="Ackertime Serviços em Informática",  # Optional
+    author="Francisco Bispo",  # Optional
     # This should be a valid email address corresponding to the author listed
     # above.
-    author_email="fcjbispo@ackertime.com",  # Optional
+    author_email="fcjbispo@franciscobispo.net",  # Optional
     # Classifiers help users find your project by categorizing it.
     #
     # For a list of valid classifiers, see https://pypi.org/classifiers/
@@ -123,34 +123,14 @@ setup(
     # and refuse to install the project if the version does not match. If you
     # do not support Python 2, you can simplify this to '>=3.5' or similar, see
     # https://packaging.python.org/guides/distributing-packages-using-setuptools/#python-requires
-    python_requires=">=3.6, <4",
+    python_requires=">=3.10, <4",
     # This field lists other packages that your project depends on to run.
     # Any package you put here will be installed by pip when your project is
     # installed, so they must be valid existing projects.
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=["beautifulsoup4==4.10.0; python_version >= '3.1'", "chardet==4.0.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'", "click==8.0.3; python_version >= '3.6'", "et-xmlfile==1.1.0; python_version >= '3.6'", "lxml==4.7.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'", "numpy==1.22.1; python_version >= '3.8'", 'ofxparse==0.21', "openpyxl==3.0.9; python_version >= '3.6'", "pandas==1.4.0; python_version >= '3.8'", "python-dateutil==2.8.2; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'", 'python-magic==0.4.13', 'python-magic-win64==0.4.13', 'pytz==2021.3', "six==1.16.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'", "soupsieve==2.3.1; python_version >= '3.6'", "xlrd==2.0.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5'"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    install_requires=["beautifulsoup4==4.12.2; python_full_version >= '3.6.0'", "et-xmlfile==1.1.0; python_version >= '3.6'", "lxml==4.9.3; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'", "numpy==1.25.1; python_version >= '3.9'", 'ofxparse==0.21', "openpyxl==3.1.2; python_version >= '3.6'", "pandas==2.0.3; python_version >= '3.8'", "python-dateutil==2.8.2; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'", 'python-magic==0.4.13', 'python-magic-win64==0.4.13', 'pytz==2023.3', "six==1.16.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'", "soupsieve==2.4.1; python_version >= '3.7'", "tzdata==2023.3; python_version >= '2'", "xlrd==2.0.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5'"
 
 ],  # Optional
     # List additional groups of dependencies here (e.g. development
@@ -172,7 +152,7 @@ setup(
     # will find and install the package correctly.
     # see https://python-packaging.readthedocs.io/en/latest/dependencies.html#packages-not-on-pypi
     #
-    dependency_links=['https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.2.1-py3-none-any.whl'
+    dependency_links=['https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.3.1-py3-none-any.whl'
 
 ],
     # If using Python 2.6 or earlier, then these have to be included in

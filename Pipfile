@@ -4,17 +4,13 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-fbpyutils = {file = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.2.1-py3-none-any.whl"}
+fbpyutils = {file = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.3.1-py3-none-any.whl"}
 
 [dev-packages]
 ipykernel = "*"
-pytest = "*"
-pytest-cov = "*"
-bandit = "*"
-flake8 = "*"
-setuptools = "*"
+black = "*"
+autopep8 = "*"
+vistir = "==0.6.1"
 pipenv-setup = "*"
-notebook = "*"
 
 [requires]
-python_version = "*"
