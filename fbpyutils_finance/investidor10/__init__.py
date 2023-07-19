@@ -1,12 +1,12 @@
-from bs4 import BeautifulSoup
-from bs4.element import Tag
+import os
+import sys
+import time
 import requests
 import sqlite3
 import pandas as pd
+from bs4 import BeautifulSoup
+from bs4.element import Tag
 from datetime import datetime
-import os, sys, time
-
-
 from multiprocessing import Pool
 
 from fbpyutils import file as FU
@@ -25,13 +25,69 @@ IFIX_PAGE_URL = "https://fiis.com.br/ifix/"
 
 CAPTURE_DATE = datetime.now().date()
 
-_tag_to_str = lambda x: x.text.replace('\n', '').strip()
-_any_to_number = lambda x: None if str(x) == '-' else float(
-    str(x).split(' ')[-1].replace('.','').replace(',','.').replace('%','')
-)
+
+def _tag_to_str(x):
+    """
+    Convert a given tag object to a string representation.
+     Args:
+        x (Tag): The tag object to convert.
+     Returns:
+        str: The modified text representation of the tag object.
+     Description:
+        This lambda function takes a tag object as input and converts it to a string representation.
+        It removes any newline characters from the text and removes leading and trailing whitespace.
+        The resulting modified text is then returned as a string.
+    """
+    return x.text.replace('\n', '').strip()
+
+
+def _any_to_number(x):
+    """
+    Convert a given value to a numeric representation.
+     Args:
+        x (any): The value to convert.
+     Returns:
+        float or None: The numeric representation of the value, or None if the value is '-'.
+     Description:
+        This lambda function takes a value as input and converts it to a numeric representation.
+        If the value is '-', it returns None.
+        Otherwise, it performs the following transformations on the value:
+        - Split the value by spaces and take the last element.
+        - Replace any occurrence of '.' with an empty string.
+        - Replace any occurrence of ',' with '.'.
+        - Replace any occurrence of '%' with an empty string.
+        The resulting modified value is then converted to a float and returned.
+    """
+    return None if str(x) == '-' \
+        else float(str(x).split(' ')[-1].replace('.','').replace(',','.').replace('%',''))
 
 
 def _get_fii_all_payment_data(fiis_page_url):
+    """
+    Retrieve and process payment data for FIIs (Fundos de Investimento Imobiliário).
+     Args:
+        fiis_page_url (str): The URL of the FIIs page to scrape.
+     Returns:
+        pandas.DataFrame: A DataFrame containing the payment data for FIIs.
+     Raises:
+        SystemError: If the HTTP request to the FIIs page returns a non-200 status code.
+     Description:
+        This function retrieves payment data for FIIs from a given webpage URL. It scrapes the webpage using the requests library
+            and parses the HTML content using BeautifulSoup.
+        The function starts by checking the HTTP status code of the webpage. If the status code is not 200, it raises a 
+            SystemError with an appropriate message.
+        It then initializes an empty list to store the payment data and defines a list of month names in Portuguese.
+        The current year is obtained using the datetime module.
+        The function iterates over each month group of payments on the webpage and extracts the year from the month group's header
+            if available.
+        For each payment card within a month group, it retrieves the payment day, month, and other payment details.
+        The function then extracts the FII ticker, details URL, name, payment amount, and payment date from each payment row within
+            a payment card.
+        The payment date is constructed using the extracted year, month, and day.
+        The extracted data is appended to the 'data' list.
+        Finally, the 'data' list is used to create a pandas DataFrame with appropriate column names.
+        The resulting DataFrame is returned as the output of the function.
+    """
     fiis_page = requests.get(fiis_page_url, headers=HEADERS)
     
     if fiis_page.status_code != 200:
@@ -77,6 +133,19 @@ def _get_fii_all_payment_data(fiis_page_url):
 
 
 def _get_fii_payment_data(fiis_page_url, type):
+    """
+    Retrieves FII payment data from a given webpage URL.
+     Parameters:
+        - fiis_page_url (str): The URL of the page containing the FII payment data.
+        - type (str): The type of payment ('com' or 'payment').
+     Returns:
+        - fii_payment_dates (DataFrame): A pandas DataFrame containing the FII payment data.
+     Raises:
+        - TypeError: If the provided payment type is not valid.
+     Overall:
+        This function takes a URL and payment type as input, fetches the FII payment data from the webpage,
+        extracts relevant information, and returns it as a pandas DataFrame.
+    """
     if not type in ('com', 'payment'):
         raise TypeError('Invalid payment type')
 
@@ -106,6 +175,16 @@ def _get_fii_payment_data(fiis_page_url, type):
 
 
 def _get_ifix_data(ifix_page_url):
+    """
+    Retrieves iFIX data from a given webpage URL.
+    Parameters:
+        - ifix_page_url (str): The URL of the page containing the iFIX data.
+     Returns:
+        - ifix_data (DataFrame): A pandas DataFrame containing the iFIX data.
+    Overall:
+        This function takes a URL as input, fetches the iFIX data from the webpage, extracts relevant
+        information, and returns it as a pandas DataFrame.
+    """
     ifix_page = requests.get(ifix_page_url, headers=HEADERS)
 
     I = BeautifulSoup(ifix_page.text, BS4_PARSER)
@@ -255,6 +334,12 @@ def get_fii_daily_position(parallelize=True):
 
         _get_fii_dy_ranking_data(FIIS_DY_DETAILS_URL).to_sql('fii_dividend_yeld_ranking', con=db, index=False, if_exists='replace')
 
+        cursor = db.cursor()
+        cursor.execute('create index fii_payment_calendar_i01 on fii_payment_calendar (substr(payment_date, 1, 4))')
+        cursor.execute('create index fii_payment_calendar_i02 on fii_payment_calendar (payment_date, ticker)')
+        cursor.execute('create index fii_ifix_position_i01 on fii_ifix_position (ticker)')
+        cursor.execute('create index fii_dividend_yeld_ranking_i01 on fii_dividend_yeld_ranking (ticker)')
+
         fii_info = read_sql('''
         select distinct ticker, details
             from fii_payment_calendar
@@ -292,6 +377,7 @@ def get_fii_daily_position(parallelize=True):
             'last_payment'
         ]].to_sql('fii_indicators', con=db, index=False, if_exists='replace')
 
+        cursor.execute('create index fii_indicators_i01 on fii_payment_calendar (ticker)')
 
         return read_sql(f"""
             select 
@@ -351,39 +437,3 @@ def get_fii_daily_position(parallelize=True):
         """)
     finally:
         db.close()
-
-
-if __name__ == '__main__':
-    INV10_SOURCE_PATH=os.environ.get('INV10_SOURCE_PATH')
-    INV10_DB_URL=os.environ.get('INV10_DB_URL')
-
-    if not all ([INV10_SOURCE_PATH, INV10_DB_URL]):
-        raise ValueError('Missing env vars for : INV10_DB_URL, INV10_SOURCE_PATH')
-
-    PARALLELIZE = os.cpu_count() > 1
-
-    df = get_fii_daily_position(parallelize=PARALLELIZE)
-
-    try:
-        path = os.path.sep.join([INV10_SOURCE_PATH, f'fii_daily_position_{CAPTURE_DATE.strftime("%Y-%m-%d")}.xlsx'])
-        df.to_excel(path, index=False, header=True, freeze_panes=(1,0))
-
-        print(f'Writed {len(df)} rows to {path}.')
-
-        db = sqlite3.connect(INV10_DB_URL)
-        src_files = FU.find(INV10_SOURCE_PATH, '*.xlsx')
-        data = []
-        for src_file in src_files:
-            d = pd.read_excel(src_file)
-            c = d.columns
-            d['source'] = src_file.split(os.path.sep)[-1]
-            c = c.insert(0, 'source')
-            d = d[[x for x in c]]
-            data.append(d)
-        r = pd.concat(data).to_sql('tb_stg_inv10_fii_payments', index=False, if_exists='replace', con=db)
-        db.close()
-
-        print(f'Writed {r} rows to tb_stg_inv10_fii_payments.')
-    except Exception as e:
-        print(f'Error found: {e}')
-        sys.exit(-1)
