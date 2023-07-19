@@ -215,6 +215,16 @@ def _get_ifix_data(ifix_page_url):
 
 
 def _get_fii_dy_ranking_data(fii_dy_details_url):
+    """
+    Retrieves dividend yield ranking data for FIIs (Foreign Institutional Investors).
+     Args:
+        fii_dy_details_url (str): The URL of the webpage containing the FII dividend yield details.
+     Returns:
+        pandas.DataFrame: A DataFrame containing the extracted dividend yield ranking data.
+     Purpose:
+        This function provides a convenient way to retrieve and process dividend yield ranking data for FIIs from a
+        given webpage URL. The extracted data can be further analyzed or used for various purposes.
+    """
     dy_page = requests.get(fii_dy_details_url, headers=HEADERS)
 
     Y = BeautifulSoup(dy_page.text, BS4_PARSER)
@@ -258,6 +268,35 @@ def _get_fii_dy_ranking_data(fii_dy_details_url):
 
 
 def _get_fii_indicators(info, sleep=None):
+    """
+    Retrieves FII (Fundo de Investimento Imobiliário) indicators from a given URL.
+     Args:
+        info (tuple): A tuple containing information about FII.
+            - If len(info) == 4, the tuple should contain (fii_ticker, fii_details_url, capture_date, sleep).
+            - If len(info) != 4, the tuple should contain (fii_ticker, fii_details_url, capture_date).
+        sleep (float, optional): The sleep time in seconds between requests. Defaults to None.
+     Returns:
+        dict: A dictionary containing FII indicators.
+            - The dictionary contains the following keys:
+                - 'PAPEL': The FII ticker.
+                - 'URL': The FII details URL.
+                - 'DATA_REFERÊNCIA': The capture date.
+                - 'COTAÇÃO': The FII price.
+                - 'DATA_COTAÇÃO': The FII price date.
+                - Other FII indicators retrieved from the webpage.
+     Raises:
+        SystemError: If the HTTP status code is not 200.
+     Notes:
+        - This function uses the requests library to retrieve the webpage content.
+        - It also uses BeautifulSoup for parsing the HTML content.
+        - The function expects the HTML structure of the webpage to be consistent.
+        - If the sleep argument is provided, the function will sleep for the specified time before returning.
+     Example:
+        info = ('FII_TICKER', 'https://example.com/fii_details', '2022-01-01')
+        indicators = _get_fii_indicators(info, sleep=0.5)
+        print(indicators)
+        # Output: {'PAPEL': 'FII_TICKER', 'URL': 'https://example.com/fii_details', 'DATA_REFERÊNCIA': '2022-01-01', ...}
+    """
     sleep = sleep or 0.3
 
     try:
@@ -321,6 +360,32 @@ def _get_fii_indicators(info, sleep=None):
 
 
 def get_fii_daily_position(parallelize=True):
+    """
+    Retrieves daily position of FII (Fundo de Investimento Imobiliário) by querying data from various sources and storing
+    them in an SQLite database in memory. The function then joins the queried data and returns a DataFrame containing the
+    daily position of FII.
+     Args:
+        parallelize (bool, optional): A flag to determine whether to use parallel processing. Defaults to True. 
+        If True and the system has more than one CPU, the function will use multiprocessing to retrieve FII indicators.
+     Returns:
+        pandas.DataFrame: A DataFrame containing the daily position of FII. The DataFrame contains the following
+        columns: 'payment_year', 'payment_year_month', 'payment_date', 'com_date', 'ticker', 'name', 'fund_name',
+        'fund_id', 'fund_type', 'segment', 'audience', 'mandate_type', 'term_type', 'management_type', 'admin_rate',
+        'payment', 'price', 'price_date', 'payment_price_ratio', 'ifix_share', 'dy_current', 'p_vp', 'daily_liquidity',
+        'daily_liquidity_unit', 'net_worth', 'net_worth_unit', 'var_last_12_months', 'vacancy', 'shareholders', 'shares',
+        'equity_by_share', 'equity', 'equity_unit', 'last_payment', 'reference_date'.
+     Raises:
+        Exception: If there is an error in retrieving data from the URLs or in processing the data.
+     Notes:
+        - This function uses the pandas library to read and write data from/to the SQLite database.
+        - It also uses the sqlite3 library to execute SQL queries.
+        - The function expects the URLs to return data in a specific format.
+        - If the parallelize argument is True and the system has more than one CPU, the function will use multiprocessing
+            to retrieve FII indicators. Otherwise, it will retrieve the indicators sequentially.
+     Example:
+        df = get_fii_daily_position()
+        print(df.head())
+    """
     PARALLELIZE = parallelize and os.cpu_count()>1
 
     db = sqlite3.connect(':memory:')
