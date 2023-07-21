@@ -11,10 +11,23 @@ from fbpyutils import file as F
 
 APP_FOLDER = os.path.dirname(os.path.realpath(__file__))
 
+USER_APP_FOLDER = os.path.sep.join([os.path.expanduser("~"), '.cvm'])
+
 CERTIFICATES = {
     f.split(os.path.sep)[-1].split('.')[0]: f
     for f in F.find(APP_FOLDER, '*.pem')
 }
+
+
+def is_valid_db_connection(conn):
+    """
+    Checks if a variable is a valid database connection.
+    Parameters:
+    - conn: Variable to be checked if it is a valid database connection.
+    Returns:
+    - bool: True if the variable is a valid database connection, False otherwise.
+    """
+    return hasattr(conn, 'execute') and callable(getattr(conn, 'execute'))
 
 
 def rate_daily_to_monthly(rate: float) -> float:
@@ -180,3 +193,7 @@ def stock_event_factor(expression: str) -> tuple:
         return event, factor
     else:
         raise ValueError('Invalid expression {}'.format(expression))
+    
+
+if not os.path.exists(USER_APP_FOLDER):
+    os.makedirs(USER_APP_FOLDER)

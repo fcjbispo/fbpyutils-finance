@@ -1,24 +1,5 @@
 import os
-import sqlite3
-import pandas as pd
-
-from datetime import datetime
-from multiprocessing import Pool
-
-import warnings
-warnings.simplefilter("ignore")
-
-from fbpyutils import file as FU, xlsx as XL
-
 import re
-
-
-_deal_dashes = lambda x: None if x in ['-'] else x
-_str_to_date = lambda x: None if x in ['-'] else datetime.strptime(x, '%d/%m/%Y').date()
-_str_to_number = lambda x: None if x in ['-'] else float(str(x).replace(',','.'))
-_tuple_as_str = lambda x: [[str(c).strip() for c in l] for l in x]
-
-import os
 import sqlite3
 import pandas as pd
 
@@ -51,13 +32,6 @@ def _deal_double_spaces(x):
     while ss in x:
         x = x.replace(ss, s)
     return x
-
-
-def _extract_file_info_old(schema_file):
-    schema_file_name = schema_file.split(os.path.sep)[-1]
-    schema_file_name_part, _ = schema_file_name.split('.')
-    schema_file_date = datetime.strptime('-'.join(schema_file_name_part.split('-')[-6:]), '%Y-%m-%d-%H-%M-%S')
-    return schema_file_name, schema_file_date
 
 
 def _extract_file_info(schema_file):

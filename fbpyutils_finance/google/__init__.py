@@ -1,7 +1,7 @@
 '''
 Google search info provider.
 '''
-from infobr import core
+from fbpyutils import debug
 
 from fbpyutils.datetime import apply_timezone
 
@@ -24,33 +24,29 @@ _market_info = [
         {'region': 'América', 'market': 'NYSEAMERICAN', 'name': 'NYSE American', 'delay': 'Em tempo real*', 'timezone': 'America/New_York' },
 ]
 
-_choose = lambda n, x, y: x[n] if len(x) > n else y
-
 _numberize = lambda x: float(x.replace(".", "").replace(",", "."))
 
 _first_or_none = lambda x: None if len(x) == 0 else x[0]
 
 def _makeurl(x):
     '''
-        Build default google search url output.
-
-        x
-            The search query string
-
-        Return an string with a full google search url from que search query
-    '''
+        Build default Google search URL output.
+        Parameters:
+            x (str): The search query string
+        Returns:
+            str: A string with a full Google search URL from the search query.
+    '''    
     q = '+'.join(x.split())
     url = 'https://www.google.com/search?q=' + q + '&ie=utf-8&oe=utf-8&num=1&lr=lang_ptBR&hl=pt-BR'
     return url
 
 def _googlesearch(x: str) -> requests.models.Response:
     '''
-    Performs a default google search using custom headers.
-
-        x
-            The search query string
-
-        Return an http response with the html page resulting from que search query
+        Performs a default Google search using custom headers.
+        Parameters:
+            x (str): The search query string
+        Returns:
+            http response: An HTTP response with the HTML page resulting from the search query.
     '''
     h = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0',
@@ -72,17 +68,13 @@ def exchange_rate(
     x: str, y: str
 ) -> Dict:
     '''
-    Performs a google search for the first currency returning its exchange rate to the second currency.
-
-        x
-            The currency from exchange
-
-        y
-            The currency to be exchanged
-
-        Return the value for 1 unit of currency from exchanged to currency to
-    '''
-    
+        Performs a Google search for the exchange rate from one currency to another.
+        Parameters:
+            x (str): The currency to be exchanged from.
+            y (str): The currency to be exchanged to.
+        Returns:
+            float: The exchange rate value for 1 unit of currency from x to y.
+    '''    
     result = {
         'info': 'EXCHANGE RATE',
         'source': 'GOOGLE',
@@ -144,7 +136,7 @@ def exchange_rate(
         }
 
     except Exception as e:
-        m =  core.debug_info(e)
+        m =  debug.debug_info(e)
         result['status'] = 'ERROR'
         result['details'] = {
             'error_message': m
@@ -157,18 +149,14 @@ def stock_price(
     x: str, market: str='BVMF'
 ) -> Dict:
     '''
-    Performs a google search for the supplied ticker in the default market.
-
-        x
-            The ticker to search for the current price
-
-        market
-            The name for the market on the ticker will be searched. Default=BVMF
-            This version supports only Brazilian BVMF market
-
-        Return an standart dict with stock price and info for the ticker supplied
+        Performs a Google search for the current price of the supplied ticker in the default market.
+        Parameters:
+            x (str): The ticker to search for the current price.
+            market (str): The name of the market on which the ticker will be searched. Default=BVMF. 
+                        This version only supports the Brazilian BVMF market.
+        Returns:
+            dict: A standard dictionary with the stock price and information for the supplied ticker.
     '''
-    
     result = {
         'info': 'STOCK PRICE',
         'source': 'GOOGLE',
@@ -286,7 +274,7 @@ def stock_price(
         }
 
     except Exception as e:
-        m =  core.debug_info(e)
+        m =  debug.debug_info(e)
         result['status'] = 'ERROR'
         result['details'] = {
             'error_message': m
