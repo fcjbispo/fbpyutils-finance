@@ -7,573 +7,200 @@ from datetime import datetime
 from multiprocessing import Pool
 
 import warnings
-warnings.simplefilter("ignore")
 
 from fbpyutils import file as FU, xlsx as XL
 
-
-_deal_dashes = lambda x: None if x in ['-'] else x
-_str_to_date = lambda x: None if x in ['-'] else datetime.strptime(x, '%d/%m/%Y').date()
-_str_to_number = lambda x: None if x in ['-'] else float(str(x).replace(',','.'))
-_tuple_as_str = lambda x: [[str(c).strip() for c in l] for l in x]
-
-
-def _deal_double_spaces(x):
-    """
-    Replaces consecutive double spaces in a string with a single space.
-
-    Args:
-        x (str): The string to be processed.
-
-    Returns:
-        str: The processed string with consecutive double spaces replaced by a single space.
-    """
-    x, ss, s = str(x), '  ', ' ' 
-    while ss in x:
-        x = x.replace(ss, s)
-    return x
-
-
-def _extract_file_info(schema_file):
-    """
-    Extracts information from a CEI file name, including the type of file and the date it was created.
-
-    Args:
-        schema_file (str): The path to the schema file to be processed.
-
-    Returns:
-        Tuple[str, datetime]: A tuple containing the CEI file type (as a string) and the date the file was created (as a datetime object).
-
-    Raises:
-        ValueError: If the file name is invalid.
-    """
-    cei_file_name = schema_file.split(os.path.sep)[-1].split('.')[0]
-
-    match = re.search(r"\b\d{4}\b", cei_file_name)
-    if match:
-        cei_file_type = cei_file_name[0:match.start()-1]
-        cei_file_date = cei_file_name[match.start():]
-
-        if '-a-' in cei_file_date:
-            cei_file_date = cei_file_date.split('-a-')[-1]
-
-        if len(cei_file_date) == 10:
-            cei_file_date = datetime.strptime(cei_file_date, '%Y-%m-%d')
-        elif len(cei_file_date) == 19:
-            cei_file_date = datetime.strptime(cei_file_date, '%Y-%m-%d-%H-%M-%S')
-        else:
-            raise ValueError(f'Nome de arquivo invalido: {cei_file_name}')
-
-        return cei_file_type, cei_file_date
-    else:
-        raise ValueError(f'Nome de arquivo invalido: {cei_file_name}')
-
-
-def _extract_product_id(product, sep='-'):
-    if 'Tesouro' in product:
-        return product
-    product_parts = product.split(sep)
-    
-    return product_parts[
-        1 if 'Futuro' in product_parts[0] else 0
-    ].strip()
-
-
-def _process_schema_movimentacao(input_files):
-    xl_dataframes = []
-    fields = [
-        'entrada_saida',
-        'data_movimentacao',
-        'movimentacao',
-        'nome_produto',
-        'codigo_produto',
-        'instituicao',
-        'quantidade',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        xl_table = _tuple_as_str(tuple(xl_obj.read_sheet_by_index(0)))
-        xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-        xl_dataframe['entrada_saida'] = xl_dataframe['Entrada/Saída']
-        xl_dataframe['data_movimentacao'] = xl_dataframe['Data'].apply(_str_to_date)
-        xl_dataframe['movimentacao'] = xl_dataframe['Movimentação']
-        xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-        xl_dataframe['codigo_produto'] = xl_dataframe['nome_produto'].apply(_extract_product_id)
-        xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-        xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-        xl_dataframe['preco_unitario'] = xl_dataframe['Preço unitário'].apply(_str_to_number)
-        xl_dataframe['valor_operacao'] = xl_dataframe['Valor da Operação'].apply(_str_to_number)
-        xl_dataframe['arquivo_origem'] = schema_file_name
-        xl_dataframe['data_referencia'] = schema_file_date
-
-        xl_dataframe = xl_dataframe[fields].copy()
-
-        xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_eventos_provisionados(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'tipo_produto',
-        'tipo_evento',
-        'previsao_pagamento',
-        'instituicao',
-        'quantidade',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        xl_table = _tuple_as_str(tuple(xl_obj.read_sheet_by_index(0)))
-        xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-        xl_dataframe = xl_dataframe[xl_dataframe['Preço unitário'] != 'Total líquido'].copy()
-
-        xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-        xl_dataframe['codigo_produto'] = xl_dataframe['nome_produto'].apply(_extract_product_id)
-        xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
-        xl_dataframe['tipo_evento'] = xl_dataframe['Tipo de Evento']
-        xl_dataframe['previsao_pagamento'] = xl_dataframe['Previsão de pagamento'].apply(_str_to_date)
-        xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-        xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-        xl_dataframe['preco_unitario'] = xl_dataframe['Preço unitário'].apply(_str_to_number)
-        xl_dataframe['valor_operacao'] = xl_dataframe['Valor líquido'].apply(_str_to_number)
-        xl_dataframe['arquivo_origem'] = schema_file_name
-        xl_dataframe['data_referencia'] = schema_file_date
-
-        xl_dataframe = xl_dataframe[fields].copy()
-
-        xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_negociacao(input_files):
-    xl_dataframes = []
-    fields = [
-        'data_negocio',
-        'movimentacao',
-        'mercado',
-        'prazo_vencimento',
-        'instituicao',
-        'codigo_produto',
-        'quantidade',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        xl_table = _tuple_as_str(tuple(xl_obj.read_sheet_by_index(0)))
-        xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-        xl_dataframe['data_negocio'] = xl_dataframe['Data do Negócio'].apply(_str_to_date)
-        xl_dataframe['movimentacao'] = xl_dataframe['Tipo de Movimentação']
-        xl_dataframe['mercado'] = xl_dataframe['Mercado']
-        xl_dataframe['prazo_vencimento'] = xl_dataframe['Prazo/Vencimento'].apply(_str_to_date)
-        xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-        xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação']
-        xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-        xl_dataframe['preco_unitario'] = xl_dataframe['Preço'].apply(_str_to_number)
-        xl_dataframe['valor_operacao'] = xl_dataframe['Valor'].apply(_str_to_number)
-        xl_dataframe['arquivo_origem'] = schema_file_name
-        xl_dataframe['data_referencia'] = schema_file_date
-
-        xl_dataframe = xl_dataframe[fields].copy()
-
-        xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_acoes(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'codigo_isin',
-        'tipo_produto',
-        'escriturador',
-        'quantidade',
-        'quantidade_disponivel',
-        'quantidade_indisponivel',
-        'motivo',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheets = ['Ações', 'Acoes']
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        for xl_sheet in xl_sheets:
-            if xl_sheet in xl_obj.sheet_names:
-                xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-                xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-                xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-                xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação'].apply(_deal_double_spaces)
-                xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-                xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-                xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
-                xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
-                xl_dataframe['escriturador'] = xl_dataframe['Escriturador'].apply(_deal_double_spaces)
-                xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-                xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number)
-                xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number)
-                xl_dataframe['motivo'] = xl_dataframe['Motivo']
-                xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
-                xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-                xl_dataframe['arquivo_origem'] = schema_file_name
-                xl_dataframe['data_referencia'] = schema_file_date
-
-                xl_dataframe = xl_dataframe[fields].copy()
-
-                xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_emprestimo_ativos(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'natureza',
-        'contrato',
-        'modalidade',
-        'opa',
-        'liquidacao_antecipada',
-        'taxa',
-        'comissao',
-        'data_registro',
-        'data_vencimento',
-        'quantidade',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheets = ['Empréstimo de Ativos', 'Empréstimos']
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        for xl_sheet in xl_sheets:
-            if xl_sheet in xl_obj.sheet_names:
-                xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-                xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-                xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-                xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-                xl_dataframe['codigo_produto'] = xl_dataframe['nome_produto'].apply(_extract_product_id)
-                xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-                xl_dataframe['natureza'] = xl_dataframe['Natureza'].apply(_deal_double_spaces)
-                xl_dataframe['contrato'] = xl_dataframe['Número de Contrato'].apply(_deal_double_spaces)
-                xl_dataframe['modalidade'] = xl_dataframe['Modalidade'].apply(_deal_double_spaces)
-                xl_dataframe['opa'] = xl_dataframe['OPA'].apply(_deal_double_spaces)
-                xl_dataframe['liquidacao_antecipada'] = xl_dataframe['Liquidação antecipada'].apply(_deal_double_spaces)
-                xl_dataframe['taxa'] = xl_dataframe['Taxa'].apply(_str_to_number)
-                xl_dataframe['comissao'] = xl_dataframe['Comissão'].apply(_str_to_number)
-                xl_dataframe['data_registro'] = xl_dataframe['Data de registro'].apply(_str_to_date)
-                xl_dataframe['data_vencimento'] = xl_dataframe['Data de vencimento'].apply(_str_to_date)
-                xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-                xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
-                xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-                xl_dataframe['arquivo_origem'] = schema_file_name
-                xl_dataframe['data_referencia'] = schema_file_date
-
-                xl_dataframe = xl_dataframe[fields].copy()
-
-                xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_etf(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'codigo_isin',
-        'tipo_produto',
-        'quantidade',
-        'quantidade_disponivel',
-        'quantidade_indisponivel',
-        'motivo',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheet = 'ETF'
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        if xl_sheet in xl_obj.sheet_names:
-            xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-            xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-            xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-            xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação'].apply(_deal_double_spaces)
-            xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-            xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-            xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
-            xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number)
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number)
-            xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
-            xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
-            xl_dataframe['data_referencia'] = schema_file_date
-
-            xl_dataframe = xl_dataframe[fields].copy()
-
-            xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_fundos_investimento(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'codigo_isin',
-        'tipo_produto',
-        'administrador',
-        'quantidade',
-        'quantidade_disponivel',
-        'quantidade_indisponivel',
-        'motivo',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheet = 'Fundo de Investimento'
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        if xl_sheet in xl_obj.sheet_names:
-            xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-            xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-            xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-            xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação'].apply(_deal_double_spaces)
-            xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-            xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-            xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
-            xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
-            xl_dataframe['administrador'] = xl_dataframe['Administrador'].apply(_deal_double_spaces)
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number)
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number)
-            xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
-            xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
-            xl_dataframe['data_referencia'] = schema_file_date
-
-            xl_dataframe = xl_dataframe[fields].copy()
-
-            xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_tesouro_direto(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'codigo_isin',
-        'indexador',
-        'vencimento',
-        'quantidade',
-        'quantidade_disponivel',
-        'quantidade_indisponivel',
-        'motivo',
-        'valor_aplicado',
-        'valor_bruto',
-        'valor_liquido',
-        'valor_atualizado',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheet = 'Tesouro Direto'
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        if xl_sheet in xl_obj.sheet_names:
-            xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-            xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-            xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-            xl_dataframe['codigo_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-            xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-            xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-            xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN']
-            xl_dataframe['indexador'] = xl_dataframe['Indexador']
-            xl_dataframe['vencimento'] = xl_dataframe['Vencimento'].apply(_str_to_date)
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number)
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number)
-            xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['valor_aplicado'] = xl_dataframe['Valor Aplicado'].apply(_str_to_number)
-            xl_dataframe['valor_bruto'] = xl_dataframe['Valor bruto'].apply(_str_to_number)
-            xl_dataframe['valor_liquido'] = xl_dataframe['Valor líquido'].apply(_str_to_number)
-            xl_dataframe['valor_atualizado'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
-            xl_dataframe['data_referencia'] = schema_file_date
-
-            xl_dataframe = xl_dataframe[fields].copy()
-
-            xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_renda_fixa(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'emissor',
-        'indexador',
-        'tipo_regime',
-        'emissao',
-        'vencimento',
-        'quantidade',
-        'quantidade_disponivel',
-        'quantidade_indisponivel',
-        'motivo',
-        'contraparte',
-        'preco_atualizado_mtm',
-        'valor_atualizado_mtm',
-        'preco_atualizado_curva',
-        'valor_atualizado_curva',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheet = 'Renda Fixa'
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        if xl_sheet in xl_obj.sheet_names:
-            xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-            xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-            xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-            xl_dataframe['codigo_produto'] = xl_dataframe['Código'].apply(_deal_double_spaces)
-            xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-            xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-            xl_dataframe['emissor'] = xl_dataframe['Emissor'].apply(_deal_double_spaces)
-            xl_dataframe['indexador'] = xl_dataframe['Indexador'].apply(_deal_double_spaces)
-            xl_dataframe['tipo_regime'] = xl_dataframe['Tipo de regime']
-            xl_dataframe['emissao'] = xl_dataframe['Data de Emissão'].apply(_str_to_date)
-            xl_dataframe['vencimento'] = xl_dataframe['Vencimento'].apply(_str_to_date)
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number)
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number)
-            xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['contraparte'] = xl_dataframe['Contraparte']
-            xl_dataframe['preco_atualizado_mtm'] = xl_dataframe['Preço Atualizado MTM'].apply(_str_to_number)
-            xl_dataframe['valor_atualizado_mtm'] = xl_dataframe['Valor Atualizado MTM'].apply(_str_to_number)
-            xl_dataframe['preco_atualizado_curva'] = xl_dataframe['Preço Atualizado CURVA'].apply(_str_to_number)
-            xl_dataframe['valor_atualizado_curva'] = xl_dataframe['Valor Atualizado CURVA'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
-            xl_dataframe['data_referencia'] = schema_file_date
-
-            xl_dataframe = xl_dataframe[fields].copy()
-
-            xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-OPERATIONS = (
-    ('movimentacao', 'movimentacao-*.xlsx', _process_schema_movimentacao, True),
-    ('eventos_provisionados', 'eventos-provisionados-*.xlsx', _process_schema_eventos_provisionados, True),
-    ('negociacao', 'negociacao-*.xlsx', _process_schema_negociacao, True),
-    ('posicao_acoes', 'posicao-*.xlsx', _process_schema_posicao_acoes, True),
-    ('posicao_emprestimo_ativos', 'posicao-*.xlsx', _process_schema_posicao_emprestimo_ativos, True),
-    ('posicao_etf', 'posicao-*.xlsx', _process_schema_posicao_etf, True),
-    ('posicao_fundos_investimento', 'posicao-*.xlsx', _process_schema_posicao_fundos_investimento, True),
-    ('posicao_tesouro_direto', 'posicao-*.xlsx', _process_schema_posicao_tesouro_direto, True),
-    ('posicao_renda_fixa', 'posicao-*.xlsx', _process_schema_posicao_renda_fixa, True),
+from fbpyutils_finance.cei.schemas import \
+    process_schema_movimentacao, process_schema_eventos_provisionados, process_schema_negociacao, \
+    process_schema_posicao_acoes, process_schema_posicao_emprestimo_ativos, process_schema_posicao_etf, \
+    process_schema_posicao_fundos_investimento, process_schema_posicao_tesouro_direto, \
+    process_schema_posicao_renda_fixa
+
+warnings.simplefilter("ignore")
+
+_OPERATIONS = (
+    ('movimentacao', 'movimentacao-*.xlsx', process_schema_movimentacao, True),
+    ('eventos_provisionados', 'eventos-provisionados-*.xlsx', process_schema_eventos_provisionados, True),
+    ('negociacao', 'negociacao-*.xlsx', process_schema_negociacao, True),
+    ('posicao_acoes', 'posicao-*.xlsx', process_schema_posicao_acoes, True),
+    ('posicao_emprestimo_ativos', 'posicao-*.xlsx', process_schema_posicao_emprestimo_ativos, True),
+    ('posicao_etf', 'posicao-*.xlsx', process_schema_posicao_etf, True),
+    ('posicao_fundos_investimento', 'posicao-*.xlsx', process_schema_posicao_fundos_investimento, True),
+    ('posicao_tesouro_direto', 'posicao-*.xlsx', process_schema_posicao_tesouro_direto, True),
+    ('posicao_renda_fixa', 'posicao-*.xlsx', process_schema_posicao_renda_fixa, True),
+)
+
+_POS_OPERATIONS = (
+{
+    'operation': 'produtos', 
+    'sql': '''
+        select distinct
+            codigo_produto, 
+            nome_produto,
+            'FII' as tipo_produto 
+        from tb_stg_posicao_fundos_investimento
+        union
+        select distinct
+            codigo_produto, 
+            nome_produto,
+            'Ações' as tipo_produto
+        from tb_stg_posicao_acoes
+        union
+        select distinct
+            codigo_produto, 
+            nome_produto,
+            'ETF' as tipo_produto
+        from tb_stg_posicao_etf
+        union
+        select distinct
+            codigo_produto, 
+            nome_produto,
+            'Renda Fixa' as tipo_produto
+        from tb_stg_posicao_renda_fixa
+        union
+        select distinct
+            codigo_produto, 
+            nome_produto,
+            'Tesouro Direto' as tipo_produto
+        from tb_stg_posicao_tesouro_direto
+        union
+        select distinct
+            codigo_produto, 
+            nome_produto,
+            'Ações' as tipo_produto
+        from tb_stg_posicao_emprestimo_ativos
+        order by 1, 2;
+    ''',
+    'params': {},
+},
+{
+    'operation': 'calendario', 
+    'sql': '''
+        SELECT codigo_produto,
+            instituicao,
+            SUBSTR(data_referencia, 1, 7)       as periodo, 
+            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
+            max(arquivo_origem)                 as arquivo_origem 
+        from tb_stg_posicao_tesouro_direto
+        GROUP BY codigo_produto, 
+                SUBSTR(data_referencia, 1, 10)
+        UNION
+        SELECT codigo_produto,
+            instituicao,
+            SUBSTR(data_referencia, 1, 7)       as periodo, 
+            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
+            max(arquivo_origem)                 as arquivo_origem 
+        from tb_stg_posicao_renda_fixa
+        GROUP BY codigo_produto, 
+                SUBSTR(data_referencia, 1, 10)
+        UNION
+        SELECT codigo_produto,
+            instituicao,
+            SUBSTR(data_referencia, 1, 7)       as periodo, 
+            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
+            max(arquivo_origem)                 as arquivo_origem 
+        from tb_stg_posicao_emprestimo_ativos
+        GROUP BY codigo_produto, 
+                SUBSTR(data_referencia, 1, 10)
+        UNION
+        SELECT codigo_produto,
+            instituicao,
+            SUBSTR(data_referencia, 1, 7)       as periodo, 
+            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
+            max(arquivo_origem)                 as arquivo_origem 
+        from tb_stg_posicao_acoes
+        GROUP BY codigo_produto, 
+                SUBSTR(data_referencia, 1, 10)
+        UNION
+        SELECT codigo_produto, 
+            instituicao,
+            SUBSTR(data_referencia, 1, 7)       as periodo, 
+            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
+            max(arquivo_origem)                 as arquivo_origem 
+        from tb_stg_posicao_fundos_investimento
+        GROUP BY codigo_produto, 
+                instituicao,
+                SUBSTR(data_referencia, 1, 7)
+        UNION
+        SELECT codigo_produto, 
+            instituicao,
+            SUBSTR(data_referencia, 1, 7)       as periodo, 
+            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
+            max(arquivo_origem)                 as arquivo_origem 
+        from tb_stg_posicao_etf
+        GROUP BY codigo_produto, 
+                instituicao,
+                SUBSTR(data_referencia, 1, 7)
+        ;
+    ''',
+    'params': {},
+},
 )
 
 
 def _process_operation(operation):
+    """
+    Process the specified operation.
+     Args:
+        operation (tuple): A tuple containing the details of the operation to be processed.
+            - op_name (str): The name of the operation.
+            - input_folder (str): The path to the folder containing the input files.
+            - input_mask (str): The mask or pattern for finding input files.
+            - processor (function): The function to be applied to the input files.
+     Returns:
+        tuple: A tuple containing the result of the operation.
+            - op_name (str): The name of the operation.
+            - num_files (int): The number of input files processed.
+            - data (any): The processed data.
+     Overview:
+        This function processes the specified operation by performing the following steps:
+        1. Extract the operation details from the input tuple.
+        2. Use the `FU.find` function to find input files in the specified input folder using the input mask.
+        3. Apply the specified `processor` function to the input files to obtain the processed data.
+        4. Return a tuple containing the operation name, the number of input files processed, and the processed data.
+     Example usage:
+        operation = ('op_name', '/path/to/input_folder', '*.txt', process_function)
+        result = _process_operation(operation)
+    """
     op_name, input_folder, input_mask, processor = operation
     input_files = FU.find(input_folder, input_mask)
     data = processor(input_files)
+
     return (op_name, len(data), data)
 
 
-def get_cei_data(input_folder, parallelize=True):
+def _get_cei_data_pre(input_folder, parallelize=True):
+    """
+    Retrieves CEI data from the specified input folder and processes it based on the specified operations.
+     Args:
+        input_folder (str): The path to the folder containing the CEI data.
+        parallelize (bool, optional): Flag indicating whether to parallelize the data processing. Defaults to True.
+     Returns:
+        list: A list containing the processed data.
+            Each item in the list represents the result of processing an operation and consists of:
+            - operation (str): The name of the operation performed.
+            - data (any): The processed data.
+     Overview:
+        This function retrieves CEI data from the specified input folder and processes it based on the operations defined in `_OPERATIONS`.
+        The `parallelize` parameter controls whether the data processing is parallelized.
+        The function first checks if parallelization is enabled by comparing the value of `parallelize` with the number of available CPUs.
+        It then initializes an empty list to store the results of the data processing.
+        If parallelization is enabled, the function uses a multiprocessing pool to concurrently process the data using the `_process_operation` function.
+        Otherwise, it sequentially processes the data by iterating over the operations and calling `_process_operation` for each operation.
+        The results of the data processing are appended to the data list.
+        Finally, the function returns the list containing the processed data.
+     Example usage:
+        data = _get_cei_data_pre(input_folder='/path/to/cei_data', parallelize=True)
+    """
     PARALLELIZE = parallelize and os.cpu_count()>1
-
     operations = []
-    for op, mask, processor, enabled in OPERATIONS:
+
+    for op, mask, processor, enabled in _OPERATIONS:
         if enabled: 
             operations.append((op, input_folder, mask, processor,))
+    
     operations = tuple(operations)
-
+    
     if PARALLELIZE:
         with Pool(os.cpu_count()) as p:
             data = p.map(_process_operation, operations)
@@ -581,900 +208,81 @@ def get_cei_data(input_folder, parallelize=True):
         data = []
         for operation in operations:
             data.append(_process_operation(operation))
-
+    
     return data
 
 
+def _get_cei_data_pos(input_folder, parallelize=True):
+    """
+    Retrieves CEI data with position operations from the specified input folder.
+     Args:
+        input_folder (str): The path to the folder containing the CEI data.
+        parallelize (bool, optional): Flag indicating whether to parallelize the data retrieval. Defaults to True.
+     Returns:
+        tuple: A tuple containing the results of the data retrieval operation.
+            Each item in the tuple represents a result and consists of:
+            - operation (str): The name of the operation performed.
+            - length (int): The length of the retrieved data.
+            - data (pandas.DataFrame): The retrieved data.
+     Overview:
+        This function retrieves CEI data from the specified input folder and performs position operations on the data.
+        The `parallelize` parameter controls whether the data retrieval operation is parallelized.
+        The function first calls `_get_cei_data_pre` to retrieve the CEI data.
+        It then creates an in-memory SQLite database and stores the retrieved data in separate tables based on the operation.
+        Next, it executes position operations by reading SQL queries from `_POS_OPERATIONS` and retrieving data from the database.
+        The results of the position operations are stored in a list.
+        Finally, the function combines the results of the position operations with the original CEI data and returns a tuple containing all the results.
+     Example usage:
+        results = _get_cei_data_pos(input_folder='/path/to/cei_data', parallelize=True)
+    """
+    cei_data = _get_cei_data_pre(input_folder, parallelize=parallelize)
 
-if __name__ == '__main__':
-    PARALLELIZE = os.cpu_count() > 1
-
-    base_path = FU.build_platform_path('C:', '/mnt/c', [
-        'Users', 'fcjbispo', 'Meu Drive', 'Finanças', 'Extratos & Faturas', 'CEI'])
-
-    input_folder = os.path.sep.join([base_path, 'aa_input'])
-    output_folder = os.path.sep.join([base_path, 'zz_output'])
-    output_db = os.path.sep.join([output_folder, 'cei-data.db'])
-
-    cei_data = get_cei_data(input_folder, parallelize=PARALLELIZE)
-
-    db = sqlite3.connect(output_db)
-
-    write_csv, sep_csv = True, '|'
+    db = sqlite3.connect(':memory:')
 
     try:
-        for operation, records, data in cei_data:
+        for operation, _, data in cei_data:
             table_name = f'tb_stg_{operation}'
             data.to_sql(table_name, con=db, if_exists='replace', index=False)
 
-            print(f'{records} writen on table {table_name}.')
-
-            if write_csv:
-                csv_output_file = os.path.sep.join([
-                    output_folder, table_name + '.csv'
-                ])
-                data.to_csv(csv_output_file, sep=sep_csv, header=True, index=False)
-                
-                print(f'Table writen to {csv_output_file} file.')
-
-        for pos_oper in (
-            {
-                'table_name': 'tb_stg_produtos', 
-                'sql': '''
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'FII' as tipo_produto 
-                    from tb_stg_posicao_fundos_investimento
-                    union
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'Ações' as tipo_produto
-                    from tb_stg_posicao_acoes
-                    union
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'ETF' as tipo_produto
-                    from tb_stg_posicao_etf
-                    union
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'Renda Fixa' as tipo_produto
-                    from tb_stg_posicao_renda_fixa
-                    union
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'Tesouro Direto' as tipo_produto
-                    from tb_stg_posicao_tesouro_direto
-                    union
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'Ações' as tipo_produto
-                    from tb_stg_posicao_emprestimo_ativos
-                    order by 1, 2;
-                ''',
-                'params': {},
-            },
-            {
-                'table_name': 'tb_stg_calendario', 
-                'sql': '''
-                    SELECT codigo_produto,
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_tesouro_direto
-                    GROUP BY codigo_produto, 
-                            SUBSTR(data_referencia, 1, 10)
-                    UNION
-                    SELECT codigo_produto,
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_renda_fixa
-                    GROUP BY codigo_produto, 
-                            SUBSTR(data_referencia, 1, 10)
-                    UNION
-                    SELECT codigo_produto,
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_emprestimo_ativos
-                    GROUP BY codigo_produto, 
-                            SUBSTR(data_referencia, 1, 10)
-                    UNION
-                    SELECT codigo_produto,
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_acoes
-                    GROUP BY codigo_produto, 
-                            SUBSTR(data_referencia, 1, 10)
-                    UNION
-                    SELECT codigo_produto, 
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_fundos_investimento
-                    GROUP BY codigo_produto, 
-                            instituicao,
-                            SUBSTR(data_referencia, 1, 7)
-                    UNION
-                    SELECT codigo_produto, 
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_etf
-                    GROUP BY codigo_produto, 
-                            instituicao,
-                            SUBSTR(data_referencia, 1, 7)
-                    ;
-                ''',
-                'params': {},
-            },
-        ):
-            table_data = pd.read_sql(
+        results = []
+        for pos_oper in _POS_OPERATIONS:
+            data = pd.read_sql(
                 pos_oper['sql'],
                 params=pos_oper.get('params', {}), 
                 con=db
             )
 
-            table_data.to_sql(
-                pos_oper['table_name'],
-                con=db,
-                if_exists='replace', 
-                index=False
-            )
-            print(f'{len(table_data)} writen on table {pos_oper["table_name"]}.')
+            results.append((pos_oper['operation'], len(data), data))
+        
+        for operation, length, data in cei_data:
+            results.append((operation, length, data))
 
-            if write_csv:
-                csv_output_file = os.path.sep.join([
-                    output_folder, pos_oper["table_name"] + '.csv'
-                ])
-                table_data.to_csv(csv_output_file, sep=sep_csv, header=True, index=False)
-                print(f'Table writen to {csv_output_file} file.')
+        return tuple(results)
     finally:
         db.close()
-def _deal_double_spaces(x):
+        db = None
+
+
+def get_cei_data(input_folder, parallelize=True, with_pos_operations=True):
     """
-    Replaces consecutive double spaces in a string with a single space.
-
-    Args:
-        x (str): The string to be processed.
-
-    Returns:
-        str: The processed string with consecutive double spaces replaced by a single space.
+    Retrieves CEI data from the specified input folder.
+     Args:
+        input_folder (str): The path to the folder containing the CEI data.
+        parallelize (bool, optional): Flag indicating whether to parallelize the data retrieval. Defaults to True.
+        with_pos_operations (bool, optional): Flag indicating whether to include position operations. Defaults to True.
+     Returns:
+        object: The result of the data retrieval operation.
+     Overview:
+        This function retrieves CEI data from the specified input folder.
+        The function determines the appropriate operation to use based on the value of the `with_pos_operations` parameter.
+        If `with_pos_operations` is True, it calls the `_get_cei_data_pos` function to retrieve the data.
+        If `with_pos_operations` is False, it calls the `_get_cei_data_pre` function to retrieve the data.
+        The `parallelize` parameter controls whether the data retrieval operation is parallelized.
+        The function returns the result of the data retrieval operation.
+     Example usage:
+        cei_data = get_cei_data(input_folder='/path/to/cei_data', parallelize=True, with_pos_operations=True)
     """
-    x, ss, s = str(x), '  ', ' ' 
-    while ss in x:
-        x = x.replace(ss, s)
-    return x
-
-
-def _extract_file_info(schema_file):
-    """
-    Extracts information from a CEI file name, including the type of file and the date it was created.
-
-    Args:
-        schema_file (str): The path to the schema file to be processed.
-
-    Returns:
-        Tuple[str, datetime]: A tuple containing the CEI file type (as a string) and the date the file was created (as a datetime object).
-
-    Raises:
-        ValueError: If the file name is invalid.
-    """
-    cei_file_name = schema_file.split(os.path.sep)[-1].split('.')[0]
-
-    match = re.search(r"\b\d{4}\b", cei_file_name)
-    if match:
-        cei_file_type = cei_file_name[0:match.start()-1]
-        cei_file_date = cei_file_name[match.start():]
-
-        if '-a-' in cei_file_date:
-            cei_file_date = cei_file_date.split('-a-')[-1]
-
-        if len(cei_file_date) == 10:
-            cei_file_date = datetime.strptime(cei_file_date, '%Y-%m-%d')
-        elif len(cei_file_date) == 19:
-            cei_file_date = datetime.strptime(cei_file_date, '%Y-%m-%d-%H-%M-%S')
-        else:
-            raise ValueError(f'Nome de arquivo invalido: {cei_file_name}')
-
-        return cei_file_type, cei_file_date
-    else:
-        raise ValueError(f'Nome de arquivo invalido: {cei_file_name}')
-
-
-def _extract_product_id(product, sep='-'):
-    if 'Tesouro' in product:
-        return product
-    product_parts = product.split(sep)
+    operation = _get_cei_data_pos \
+        if with_pos_operations else _get_cei_data_pre
     
-    return product_parts[
-        1 if 'Futuro' in product_parts[0] else 0
-    ].strip()
-
-
-def _process_schema_movimentacao(input_files):
-    xl_dataframes = []
-    fields = [
-        'entrada_saida',
-        'data_movimentacao',
-        'movimentacao',
-        'nome_produto',
-        'codigo_produto',
-        'instituicao',
-        'quantidade',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        xl_table = _tuple_as_str(tuple(xl_obj.read_sheet_by_index(0)))
-        xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-        xl_dataframe['entrada_saida'] = xl_dataframe['Entrada/Saída']
-        xl_dataframe['data_movimentacao'] = xl_dataframe['Data'].apply(_str_to_date)
-        xl_dataframe['movimentacao'] = xl_dataframe['Movimentação']
-        xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-        xl_dataframe['codigo_produto'] = xl_dataframe['nome_produto'].apply(_extract_product_id)
-        xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-        xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-        xl_dataframe['preco_unitario'] = xl_dataframe['Preço unitário'].apply(_str_to_number)
-        xl_dataframe['valor_operacao'] = xl_dataframe['Valor da Operação'].apply(_str_to_number)
-        xl_dataframe['arquivo_origem'] = schema_file_name
-        xl_dataframe['data_referencia'] = schema_file_date
-
-        xl_dataframe = xl_dataframe[fields].copy()
-
-        xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_eventos_provisionados(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'tipo_produto',
-        'tipo_evento',
-        'previsao_pagamento',
-        'instituicao',
-        'quantidade',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        xl_table = _tuple_as_str(tuple(xl_obj.read_sheet_by_index(0)))
-        xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-        xl_dataframe = xl_dataframe[xl_dataframe['Preço unitário'] != 'Total líquido'].copy()
-
-        xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-        xl_dataframe['codigo_produto'] = xl_dataframe['nome_produto'].apply(_extract_product_id)
-        xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
-        xl_dataframe['tipo_evento'] = xl_dataframe['Tipo de Evento']
-        xl_dataframe['previsao_pagamento'] = xl_dataframe['Previsão de pagamento'].apply(_str_to_date)
-        xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-        xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-        xl_dataframe['preco_unitario'] = xl_dataframe['Preço unitário'].apply(_str_to_number)
-        xl_dataframe['valor_operacao'] = xl_dataframe['Valor líquido'].apply(_str_to_number)
-        xl_dataframe['arquivo_origem'] = schema_file_name
-        xl_dataframe['data_referencia'] = schema_file_date
-
-        xl_dataframe = xl_dataframe[fields].copy()
-
-        xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_negociacao(input_files):
-    xl_dataframes = []
-    fields = [
-        'data_negocio',
-        'movimentacao',
-        'mercado',
-        'prazo_vencimento',
-        'instituicao',
-        'codigo_produto',
-        'quantidade',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        xl_table = _tuple_as_str(tuple(xl_obj.read_sheet_by_index(0)))
-        xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-        xl_dataframe['data_negocio'] = xl_dataframe['Data do Negócio'].apply(_str_to_date)
-        xl_dataframe['movimentacao'] = xl_dataframe['Tipo de Movimentação']
-        xl_dataframe['mercado'] = xl_dataframe['Mercado']
-        xl_dataframe['prazo_vencimento'] = xl_dataframe['Prazo/Vencimento'].apply(_str_to_date)
-        xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-        xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação']
-        xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-        xl_dataframe['preco_unitario'] = xl_dataframe['Preço'].apply(_str_to_number)
-        xl_dataframe['valor_operacao'] = xl_dataframe['Valor'].apply(_str_to_number)
-        xl_dataframe['arquivo_origem'] = schema_file_name
-        xl_dataframe['data_referencia'] = schema_file_date
-
-        xl_dataframe = xl_dataframe[fields].copy()
-
-        xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_acoes(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'codigo_isin',
-        'tipo_produto',
-        'escriturador',
-        'quantidade',
-        'quantidade_disponivel',
-        'quantidade_indisponivel',
-        'motivo',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheets = ['Ações', 'Acoes']
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        for xl_sheet in xl_sheets:
-            if xl_sheet in xl_obj.sheet_names:
-                xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-                xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-                xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-                xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação'].apply(_deal_double_spaces)
-                xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-                xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-                xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
-                xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
-                xl_dataframe['escriturador'] = xl_dataframe['Escriturador'].apply(_deal_double_spaces)
-                xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-                xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number)
-                xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number)
-                xl_dataframe['motivo'] = xl_dataframe['Motivo']
-                xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
-                xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-                xl_dataframe['arquivo_origem'] = schema_file_name
-                xl_dataframe['data_referencia'] = schema_file_date
-
-                xl_dataframe = xl_dataframe[fields].copy()
-
-                xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_emprestimo_ativos(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'natureza',
-        'contrato',
-        'modalidade',
-        'opa',
-        'liquidacao_antecipada',
-        'taxa',
-        'comissao',
-        'data_registro',
-        'data_vencimento',
-        'quantidade',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheets = ['Empréstimo de Ativos', 'Empréstimos']
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        for xl_sheet in xl_sheets:
-            if xl_sheet in xl_obj.sheet_names:
-                xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-                xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-                xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-                xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-                xl_dataframe['codigo_produto'] = xl_dataframe['nome_produto'].apply(_extract_product_id)
-                xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-                xl_dataframe['natureza'] = xl_dataframe['Natureza'].apply(_deal_double_spaces)
-                xl_dataframe['contrato'] = xl_dataframe['Número de Contrato'].apply(_deal_double_spaces)
-                xl_dataframe['modalidade'] = xl_dataframe['Modalidade'].apply(_deal_double_spaces)
-                xl_dataframe['opa'] = xl_dataframe['OPA'].apply(_deal_double_spaces)
-                xl_dataframe['liquidacao_antecipada'] = xl_dataframe['Liquidação antecipada'].apply(_deal_double_spaces)
-                xl_dataframe['taxa'] = xl_dataframe['Taxa'].apply(_str_to_number)
-                xl_dataframe['comissao'] = xl_dataframe['Comissão'].apply(_str_to_number)
-                xl_dataframe['data_registro'] = xl_dataframe['Data de registro'].apply(_str_to_date)
-                xl_dataframe['data_vencimento'] = xl_dataframe['Data de vencimento'].apply(_str_to_date)
-                xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-                xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
-                xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-                xl_dataframe['arquivo_origem'] = schema_file_name
-                xl_dataframe['data_referencia'] = schema_file_date
-
-                xl_dataframe = xl_dataframe[fields].copy()
-
-                xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_etf(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'codigo_isin',
-        'tipo_produto',
-        'quantidade',
-        'quantidade_disponivel',
-        'quantidade_indisponivel',
-        'motivo',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheet = 'ETF'
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        if xl_sheet in xl_obj.sheet_names:
-            xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-            xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-            xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-            xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação'].apply(_deal_double_spaces)
-            xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-            xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-            xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
-            xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number)
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number)
-            xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
-            xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
-            xl_dataframe['data_referencia'] = schema_file_date
-
-            xl_dataframe = xl_dataframe[fields].copy()
-
-            xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_fundos_investimento(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'codigo_isin',
-        'tipo_produto',
-        'administrador',
-        'quantidade',
-        'quantidade_disponivel',
-        'quantidade_indisponivel',
-        'motivo',
-        'preco_unitario',
-        'valor_operacao',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheet = 'Fundo de Investimento'
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        if xl_sheet in xl_obj.sheet_names:
-            xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-            xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-            xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-            xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação'].apply(_deal_double_spaces)
-            xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-            xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-            xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
-            xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
-            xl_dataframe['administrador'] = xl_dataframe['Administrador'].apply(_deal_double_spaces)
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number)
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number)
-            xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
-            xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
-            xl_dataframe['data_referencia'] = schema_file_date
-
-            xl_dataframe = xl_dataframe[fields].copy()
-
-            xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_tesouro_direto(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'codigo_isin',
-        'indexador',
-        'vencimento',
-        'quantidade',
-        'quantidade_disponivel',
-        'quantidade_indisponivel',
-        'motivo',
-        'valor_aplicado',
-        'valor_bruto',
-        'valor_liquido',
-        'valor_atualizado',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheet = 'Tesouro Direto'
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        if xl_sheet in xl_obj.sheet_names:
-            xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-            xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-            xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-            xl_dataframe['codigo_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-            xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-            xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-            xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN']
-            xl_dataframe['indexador'] = xl_dataframe['Indexador']
-            xl_dataframe['vencimento'] = xl_dataframe['Vencimento'].apply(_str_to_date)
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number)
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number)
-            xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['valor_aplicado'] = xl_dataframe['Valor Aplicado'].apply(_str_to_number)
-            xl_dataframe['valor_bruto'] = xl_dataframe['Valor bruto'].apply(_str_to_number)
-            xl_dataframe['valor_liquido'] = xl_dataframe['Valor líquido'].apply(_str_to_number)
-            xl_dataframe['valor_atualizado'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
-            xl_dataframe['data_referencia'] = schema_file_date
-
-            xl_dataframe = xl_dataframe[fields].copy()
-
-            xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-def _process_schema_posicao_renda_fixa(input_files):
-    xl_dataframes = []
-    fields = [
-        'codigo_produto',
-        'nome_produto',
-        'instituicao',
-        'emissor',
-        'indexador',
-        'tipo_regime',
-        'emissao',
-        'vencimento',
-        'quantidade',
-        'quantidade_disponivel',
-        'quantidade_indisponivel',
-        'motivo',
-        'contraparte',
-        'preco_atualizado_mtm',
-        'valor_atualizado_mtm',
-        'preco_atualizado_curva',
-        'valor_atualizado_curva',
-        'arquivo_origem',
-        'data_referencia'
-    ]
-
-    xl_sheet = 'Renda Fixa'
-    
-    for schema_file in input_files:
-        schema_file_name, schema_file_date = _extract_file_info(schema_file)
-
-        xl_obj = XL.ExcelWorkbook(schema_file)
-        if xl_sheet in xl_obj.sheet_names:
-            xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
-            xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
-
-            xl_dataframe = xl_dataframe[xl_dataframe['Produto'] != ''].copy()
-
-            xl_dataframe['codigo_produto'] = xl_dataframe['Código'].apply(_deal_double_spaces)
-            xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
-            xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
-            xl_dataframe['emissor'] = xl_dataframe['Emissor'].apply(_deal_double_spaces)
-            xl_dataframe['indexador'] = xl_dataframe['Indexador'].apply(_deal_double_spaces)
-            xl_dataframe['tipo_regime'] = xl_dataframe['Tipo de regime']
-            xl_dataframe['emissao'] = xl_dataframe['Data de Emissão'].apply(_str_to_date)
-            xl_dataframe['vencimento'] = xl_dataframe['Vencimento'].apply(_str_to_date)
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number)
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number)
-            xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['contraparte'] = xl_dataframe['Contraparte']
-            xl_dataframe['preco_atualizado_mtm'] = xl_dataframe['Preço Atualizado MTM'].apply(_str_to_number)
-            xl_dataframe['valor_atualizado_mtm'] = xl_dataframe['Valor Atualizado MTM'].apply(_str_to_number)
-            xl_dataframe['preco_atualizado_curva'] = xl_dataframe['Preço Atualizado CURVA'].apply(_str_to_number)
-            xl_dataframe['valor_atualizado_curva'] = xl_dataframe['Valor Atualizado CURVA'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
-            xl_dataframe['data_referencia'] = schema_file_date
-
-            xl_dataframe = xl_dataframe[fields].copy()
-
-            xl_dataframes.append(xl_dataframe)
-
-    return pd.concat(xl_dataframes)
-
-
-OPERATIONS = (
-    ('movimentacao', 'movimentacao-*.xlsx', _process_schema_movimentacao, True),
-    ('eventos_provisionados', 'eventos-provisionados-*.xlsx', _process_schema_eventos_provisionados, True),
-    ('negociacao', 'negociacao-*.xlsx', _process_schema_negociacao, True),
-    ('posicao_acoes', 'posicao-*.xlsx', _process_schema_posicao_acoes, True),
-    ('posicao_emprestimo_ativos', 'posicao-*.xlsx', _process_schema_posicao_emprestimo_ativos, True),
-    ('posicao_etf', 'posicao-*.xlsx', _process_schema_posicao_etf, True),
-    ('posicao_fundos_investimento', 'posicao-*.xlsx', _process_schema_posicao_fundos_investimento, True),
-    ('posicao_tesouro_direto', 'posicao-*.xlsx', _process_schema_posicao_tesouro_direto, True),
-    ('posicao_renda_fixa', 'posicao-*.xlsx', _process_schema_posicao_renda_fixa, True),
-)
-
-
-def _process_operation(operation):
-    op_name, input_folder, input_mask, processor = operation
-    input_files = FU.find(input_folder, input_mask)
-    data = processor(input_files)
-    return (op_name, len(data), data)
-
-
-def get_cei_data(input_folder, parallelize=True):
-    PARALLELIZE = parallelize and os.cpu_count()>1
-
-    operations = []
-    for op, mask, processor, enabled in OPERATIONS:
-        if enabled: 
-            operations.append((op, input_folder, mask, processor,))
-    operations = tuple(operations)
-
-    if PARALLELIZE:
-        with Pool(os.cpu_count()) as p:
-            data = p.map(_process_operation, operations)
-    else:
-        data = []
-        for operation in operations:
-            data.append(_process_operation(operation))
-
-    return data
-
-
-
-if __name__ == '__main__':
-    PARALLELIZE = os.cpu_count() > 1
-
-    CEI_SOURCE_PATH = os.environ.get('CEI_SOURCE_PATH')
-    CEI_DB_URL = os.environ.get('CEI_DB_URL')
-    CEI_WRITE_CSV = bool(os.environ.get('CEI_WRITE_CSV', False))
-
-    if not all([CEI_DB_URL, CEI_SOURCE_PATH]):
-        raise ValueError('Missing environment variables CEI_SOURCE_PATH, CEI_DB_URL')
-
-    base_path = CEI_SOURCE_PATH
-
-    input_folder = os.path.sep.join([base_path, 'aa_input'])
-    output_folder = os.path.sep.join([base_path, 'zz_output'])
-    output_db = CEI_DB_URL
-
-    cei_data = get_cei_data(input_folder, parallelize=PARALLELIZE)
-
-    db = sqlite3.connect(output_db)
-
-    write_csv, sep_csv = CEI_WRITE_CSV, '|'
-
-    try:
-        for operation, records, data in cei_data:
-            table_name = f'tb_stg_{operation}'
-            data.to_sql(table_name, con=db, if_exists='replace', index=False)
-
-            print(f'{records} writen on table {table_name}.')
-
-            if write_csv:
-                csv_output_file = os.path.sep.join([
-                    output_folder, table_name + '.csv'
-                ])
-                data.to_csv(csv_output_file, sep=sep_csv, header=True, index=False)
-                
-                print(f'Table writen to {csv_output_file} file.')
-
-        for pos_oper in (
-            {
-                'table_name': 'tb_stg_produtos', 
-                'sql': '''
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'FII' as tipo_produto 
-                    from tb_stg_posicao_fundos_investimento
-                    union
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'Ações' as tipo_produto
-                    from tb_stg_posicao_acoes
-                    union
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'ETF' as tipo_produto
-                    from tb_stg_posicao_etf
-                    union
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'Renda Fixa' as tipo_produto
-                    from tb_stg_posicao_renda_fixa
-                    union
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'Tesouro Direto' as tipo_produto
-                    from tb_stg_posicao_tesouro_direto
-                    union
-                    select distinct
-                        codigo_produto, 
-                        nome_produto,
-                        'Ações' as tipo_produto
-                    from tb_stg_posicao_emprestimo_ativos
-                    order by 1, 2;
-                ''',
-                'params': {},
-            },
-            {
-                'table_name': 'tb_stg_calendario', 
-                'sql': '''
-                    SELECT codigo_produto,
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_tesouro_direto
-                    GROUP BY codigo_produto, 
-                            SUBSTR(data_referencia, 1, 10)
-                    UNION
-                    SELECT codigo_produto,
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_renda_fixa
-                    GROUP BY codigo_produto, 
-                            SUBSTR(data_referencia, 1, 10)
-                    UNION
-                    SELECT codigo_produto,
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_emprestimo_ativos
-                    GROUP BY codigo_produto, 
-                            SUBSTR(data_referencia, 1, 10)
-                    UNION
-                    SELECT codigo_produto,
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_acoes
-                    GROUP BY codigo_produto, 
-                            SUBSTR(data_referencia, 1, 10)
-                    UNION
-                    SELECT codigo_produto, 
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_fundos_investimento
-                    GROUP BY codigo_produto, 
-                            instituicao,
-                            SUBSTR(data_referencia, 1, 7)
-                    UNION
-                    SELECT codigo_produto, 
-                        instituicao,
-                        SUBSTR(data_referencia, 1, 7)       as periodo, 
-                        max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-                        max(arquivo_origem)                 as arquivo_origem 
-                    from tb_stg_posicao_etf
-                    GROUP BY codigo_produto, 
-                            instituicao,
-                            SUBSTR(data_referencia, 1, 7)
-                    ;
-                ''',
-                'params': {},
-            },
-        ):
-            table_data = pd.read_sql(
-                pos_oper['sql'],
-                params=pos_oper.get('params', {}), 
-                con=db
-            )
-
-            table_data.to_sql(
-                pos_oper['table_name'],
-                con=db,
-                if_exists='replace', 
-                index=False
-            )
-            print(f'{len(table_data)} writen on table {pos_oper["table_name"]}.')
-
-            if write_csv:
-                csv_output_file = os.path.sep.join([
-                    output_folder, pos_oper["table_name"] + '.csv'
-                ])
-                table_data.to_csv(csv_output_file, sep=sep_csv, header=True, index=False)
-                print(f'Table writen to {csv_output_file} file.')
-    finally:
-        db.close()
+    return operation(input_folder, parallelize)
