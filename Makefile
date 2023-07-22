@@ -14,7 +14,7 @@ clean:
 test:
 	pipenv run python -m pytest --cov-report xml --junitxml tests/report.xml tests/
 
-wheel:
+wheel: clean
 	pipenv run pipenv-setup sync
 	pipenv run python setup.py bdist_wheel
 	cp -fv "dist/$(shell ls dist | sort -r | head -1)" ${BUILD_DIST}/
