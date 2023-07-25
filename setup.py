@@ -43,7 +43,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="1.1.0",  # Required
+    version="1.1.1",  # Required
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
     # https://packaging.python.org/specifications/core-metadata/#summary
@@ -134,7 +134,7 @@ setup(
         "beautifulsoup4==4.12.2; python_full_version >= '3.6.0'",
         "certifi==2023.5.7; python_version >= '3.6'",
         "charset-normalizer==3.2.0; python_full_version >= '3.7.0'",
-        "et-xmlfile==1.1.0; python_version >= '3.6'",
+        "et-xmlfile==1.1.1; python_version >= '3.6'",
         "idna==3.4; python_version >= '3.5'",
         "lxml==4.9.3; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
         "numpy==1.25.1; python_version >= '3.10'",

@@ -247,6 +247,7 @@ def process_schema_posicao_acoes(input_files):
         'codigo_produto',
         'nome_produto',
         'instituicao',
+        'conta',
         'codigo_isin',
         'tipo_produto',
         'escriturador',
@@ -276,6 +277,12 @@ def process_schema_posicao_acoes(input_files):
                 xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação'].apply(_deal_double_spaces)
                 xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
                 xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
+
+                if 'Conta' in xl_dataframe.columns:
+                    xl_dataframe['conta'] = xl_dataframe['Conta'].apply(_deal_double_spaces)
+                else:
+                    xl_dataframe['conta'] = '000000000'
+
                 xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
                 xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
                 xl_dataframe['escriturador'] = xl_dataframe['Escriturador'].apply(_deal_double_spaces)
