@@ -122,6 +122,7 @@ def process_schema_movimentacao(input_files):
         'nome_produto',
         'codigo_produto',
         'instituicao',
+        'conta',
         'quantidade',
         'preco_unitario',
         'valor_operacao',
@@ -142,6 +143,12 @@ def process_schema_movimentacao(input_files):
         xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
         xl_dataframe['codigo_produto'] = xl_dataframe['nome_produto'].apply(_extract_product_id)
         xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
+
+        if 'Conta' in xl_dataframe.columns:
+            xl_dataframe['conta'] = xl_dataframe['Conta'].apply(_deal_double_spaces)
+        else:
+            xl_dataframe['conta'] = '000000000'
+        
         xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
         xl_dataframe['preco_unitario'] = xl_dataframe['Preço unitário'].apply(_str_to_number)
         xl_dataframe['valor_operacao'] = xl_dataframe['Valor da Operação'].apply(_str_to_number)
@@ -164,6 +171,7 @@ def process_schema_eventos_provisionados(input_files):
         'tipo_evento',
         'previsao_pagamento',
         'instituicao',
+        'conta',
         'quantidade',
         'preco_unitario',
         'valor_operacao',
@@ -186,6 +194,12 @@ def process_schema_eventos_provisionados(input_files):
         xl_dataframe['tipo_evento'] = xl_dataframe['Tipo de Evento']
         xl_dataframe['previsao_pagamento'] = xl_dataframe['Previsão de pagamento'].apply(_str_to_date)
         xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
+
+        if 'Conta' in xl_dataframe.columns:
+            xl_dataframe['conta'] = xl_dataframe['Conta'].apply(_deal_double_spaces)
+        else:
+            xl_dataframe['conta'] = '000000000'
+
         xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
         xl_dataframe['preco_unitario'] = xl_dataframe['Preço unitário'].apply(_str_to_number)
         xl_dataframe['valor_operacao'] = xl_dataframe['Valor líquido'].apply(_str_to_number)
@@ -207,6 +221,7 @@ def process_schema_negociacao(input_files):
         'mercado',
         'prazo_vencimento',
         'instituicao',
+        'conta',
         'codigo_produto',
         'quantidade',
         'preco_unitario',
@@ -227,6 +242,12 @@ def process_schema_negociacao(input_files):
         xl_dataframe['mercado'] = xl_dataframe['Mercado']
         xl_dataframe['prazo_vencimento'] = xl_dataframe['Prazo/Vencimento'].apply(_str_to_date)
         xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
+
+        if 'Conta' in xl_dataframe.columns:
+            xl_dataframe['conta'] = xl_dataframe['Conta'].apply(_deal_double_spaces)
+        else:
+            xl_dataframe['conta'] = '000000000'
+
         xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação']
         xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
         xl_dataframe['preco_unitario'] = xl_dataframe['Preço'].apply(_str_to_number)
@@ -308,6 +329,7 @@ def process_schema_posicao_emprestimo_ativos(input_files):
         'codigo_produto',
         'nome_produto',
         'instituicao',
+        'conta',
         'natureza',
         'contrato',
         'modalidade',
@@ -340,6 +362,12 @@ def process_schema_posicao_emprestimo_ativos(input_files):
                 xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
                 xl_dataframe['codigo_produto'] = xl_dataframe['nome_produto'].apply(_extract_product_id)
                 xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
+
+                if 'Conta' in xl_dataframe.columns:
+                    xl_dataframe['conta'] = xl_dataframe['Conta'].apply(_deal_double_spaces)
+                else:
+                    xl_dataframe['conta'] = '000000000'
+
                 xl_dataframe['natureza'] = xl_dataframe['Natureza'].apply(_deal_double_spaces)
                 xl_dataframe['contrato'] = xl_dataframe['Número de Contrato'].apply(_deal_double_spaces)
                 xl_dataframe['modalidade'] = xl_dataframe['Modalidade'].apply(_deal_double_spaces)
@@ -368,6 +396,7 @@ def process_schema_posicao_etf(input_files):
         'codigo_produto',
         'nome_produto',
         'instituicao',
+        'conta',
         'codigo_isin',
         'tipo_produto',
         'quantidade',
@@ -395,6 +424,12 @@ def process_schema_posicao_etf(input_files):
             xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação'].apply(_deal_double_spaces)
             xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
             xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
+
+            if 'Conta' in xl_dataframe.columns:
+                xl_dataframe['conta'] = xl_dataframe['Conta'].apply(_deal_double_spaces)
+            else:
+                xl_dataframe['conta'] = '000000000'
+
             xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
             xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
             xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
@@ -419,6 +454,7 @@ def process_schema_posicao_fundos_investimento(input_files):
         'codigo_produto',
         'nome_produto',
         'instituicao',
+        'conta',
         'codigo_isin',
         'tipo_produto',
         'administrador',
@@ -447,6 +483,12 @@ def process_schema_posicao_fundos_investimento(input_files):
             xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação'].apply(_deal_double_spaces)
             xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
             xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
+
+            if 'Conta' in xl_dataframe.columns:
+                xl_dataframe['conta'] = xl_dataframe['Conta'].apply(_deal_double_spaces)
+            else:
+                xl_dataframe['conta'] = '000000000'
+
             xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
             xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
             xl_dataframe['administrador'] = xl_dataframe['Administrador'].apply(_deal_double_spaces)
@@ -472,6 +514,7 @@ def process_schema_posicao_tesouro_direto(input_files):
         'codigo_produto',
         'nome_produto',
         'instituicao',
+        'conta',
         'codigo_isin',
         'indexador',
         'vencimento',
@@ -502,6 +545,12 @@ def process_schema_posicao_tesouro_direto(input_files):
             xl_dataframe['codigo_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
             xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
             xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
+
+            if 'Conta' in xl_dataframe.columns:
+                xl_dataframe['conta'] = xl_dataframe['Conta'].apply(_deal_double_spaces)
+            else:
+                xl_dataframe['conta'] = '000000000'
+
             xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN']
             xl_dataframe['indexador'] = xl_dataframe['Indexador']
             xl_dataframe['vencimento'] = xl_dataframe['Vencimento'].apply(_str_to_date)
@@ -529,6 +578,7 @@ def process_schema_posicao_renda_fixa(input_files):
         'codigo_produto',
         'nome_produto',
         'instituicao',
+        'conta',
         'emissor',
         'indexador',
         'tipo_regime',
@@ -562,6 +612,12 @@ def process_schema_posicao_renda_fixa(input_files):
             xl_dataframe['codigo_produto'] = xl_dataframe['Código'].apply(_deal_double_spaces)
             xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
             xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
+
+            if 'Conta' in xl_dataframe.columns:
+                xl_dataframe['conta'] = xl_dataframe['Conta'].apply(_deal_double_spaces)
+            else:
+                xl_dataframe['conta'] = '000000000'
+
             xl_dataframe['emissor'] = xl_dataframe['Emissor'].apply(_deal_double_spaces)
             xl_dataframe['indexador'] = xl_dataframe['Indexador'].apply(_deal_double_spaces)
             xl_dataframe['tipo_regime'] = xl_dataframe['Tipo de regime']
@@ -584,4 +640,3 @@ def process_schema_posicao_renda_fixa(input_files):
             xl_dataframes.append(xl_dataframe)
 
     return pd.concat(xl_dataframes)
-
