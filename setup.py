@@ -134,7 +134,7 @@ setup(
         "beautifulsoup4==4.12.2; python_full_version >= '3.6.0'",
         "certifi==2023.5.7; python_version >= '3.6'",
         "charset-normalizer==3.2.0; python_full_version >= '3.7.0'",
-        "et-xmlfile==1.1.1; python_version >= '3.6'",
+        "et-xmlfile==1.1.0; python_version >= '3.6'",
         "idna==3.4; python_version >= '3.5'",
         "lxml==4.9.3; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
         "numpy==1.25.1; python_version >= '3.10'",
