@@ -7,7 +7,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 import fbpyutils_finance as FI
-from fbpyutils import file as F
+from fbpyutils import file as F, xlsx as XL
 
 
 _bvmf_cert=FI.CERTIFICATES['bvmf-bmfbovespa-com-br']
@@ -253,6 +253,28 @@ class StockHistory():
         """
         return pd.to_datetime(x, format=format, errors='ignore').date()
 
+    @staticmethod
+    def get_info_tables():
+        info_tables_path = os.path.sep.join([
+            FI.APP_FOLDER, 'bovespa', 'tabelas_anexas_bovespa.xlsx'])
+        response = {
+            'status': 'OK'
+        }
+        try:
+            info_tables = XL.ExcelWorkbook(info_tables_path)
+            response['tables'] = {}
+            for sheet in info_tables.sheet_names:
+                info_data = tuple(info_tables.read_sheet(sheet))
+                response['tables'][sheet] = pd.DataFrame(
+                    info_data[1:], 
+                    columns=[c.lower() for c in info_data[0]]
+                )
+            response['message'] = f'All {len(info_tables.sheet_names)} fetched.'
+        except Exception as e:
+            response['status'] = 'ERROR'
+            response['message'] = f'Error fetching bovespa info tables: {str(e)}'
+
+        return response
 
     def __init__(self, download_folder=None):
         """
