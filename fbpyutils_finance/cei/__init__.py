@@ -128,12 +128,14 @@ _POS_OPERATIONS = (
         UNION
         SELECT codigo_produto, 
             instituicao,
+            conta,
             SUBSTR(data_referencia, 1, 7)       as periodo, 
             max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
             max(arquivo_origem)                 as arquivo_origem 
         from tb_stg_posicao_fundos_investimento
         GROUP BY codigo_produto, 
                 instituicao,
+                conta,
                 SUBSTR(data_referencia, 1, 7)
         UNION
         SELECT codigo_produto, 
