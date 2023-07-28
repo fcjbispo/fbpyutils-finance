@@ -50,6 +50,7 @@ _POS_OPERATIONS = (
             nome_produto,
             'Ações' as tipo_produto
         from tb_stg_posicao_acoes
+        where tipo_produto not in ('Recibo', 'Direito')
         union
         select distinct
             codigo_produto, 
