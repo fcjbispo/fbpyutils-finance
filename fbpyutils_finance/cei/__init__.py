@@ -35,6 +35,11 @@ _POS_OPERATIONS = (
     'operation': 'produtos', 
     'sql': '''
         select distinct
+            codigo_produto,
+            nome_produto,
+            tipo_produto
+        from (
+        select distinct
             codigo_produto, 
             nome_produto,
             'FII' as tipo_produto 
@@ -69,6 +74,7 @@ _POS_OPERATIONS = (
             nome_produto,
             'Ações' as tipo_produto
         from tb_stg_posicao_emprestimo_ativos
+        )
         order by 1, 2;
     ''',
     'params': {},
@@ -78,38 +84,46 @@ _POS_OPERATIONS = (
     'sql': '''
         SELECT codigo_produto,
             instituicao,
+            conta,
             SUBSTR(data_referencia, 1, 7)       as periodo, 
             max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
             max(arquivo_origem)                 as arquivo_origem 
         from tb_stg_posicao_tesouro_direto
-        GROUP BY codigo_produto, 
+        GROUP BY codigo_produto,
+                conta, 
                 SUBSTR(data_referencia, 1, 10)
         UNION
         SELECT codigo_produto,
             instituicao,
+            conta,
             SUBSTR(data_referencia, 1, 7)       as periodo, 
             max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
             max(arquivo_origem)                 as arquivo_origem 
         from tb_stg_posicao_renda_fixa
         GROUP BY codigo_produto, 
+                conta,
                 SUBSTR(data_referencia, 1, 10)
         UNION
         SELECT codigo_produto,
             instituicao,
+            conta,
             SUBSTR(data_referencia, 1, 7)       as periodo, 
             max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
             max(arquivo_origem)                 as arquivo_origem 
         from tb_stg_posicao_emprestimo_ativos
         GROUP BY codigo_produto, 
+                conta,
                 SUBSTR(data_referencia, 1, 10)
         UNION
         SELECT codigo_produto,
             instituicao,
+            conta,
             SUBSTR(data_referencia, 1, 7)       as periodo, 
             max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
             max(arquivo_origem)                 as arquivo_origem 
         from tb_stg_posicao_acoes
         GROUP BY codigo_produto, 
+                conta,
                 SUBSTR(data_referencia, 1, 10)
         UNION
         SELECT codigo_produto, 
@@ -124,12 +138,14 @@ _POS_OPERATIONS = (
         UNION
         SELECT codigo_produto, 
             instituicao,
+            conta,
             SUBSTR(data_referencia, 1, 7)       as periodo, 
             max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
             max(arquivo_origem)                 as arquivo_origem 
         from tb_stg_posicao_etf
         GROUP BY codigo_produto, 
                 instituicao,
+                conta,
                 SUBSTR(data_referencia, 1, 7)
         ;
     ''',
