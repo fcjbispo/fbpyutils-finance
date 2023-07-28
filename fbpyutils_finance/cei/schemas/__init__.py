@@ -55,7 +55,8 @@ def _extract_file_info(schema_file):
         schema_file (str): The path to the schema file to be processed.
 
     Returns:
-        Tuple[str, datetime]: A tuple containing the CEI file type (as a string) and the date the file was created (as a datetime object).
+        Tuple[str, datetime]: A tuple containing the CEI file type (as a string)
+        and the date the file was created (as a datetime object).
 
     Raises:
         ValueError: If the file name is invalid.
@@ -77,7 +78,7 @@ def _extract_file_info(schema_file):
         else:
             raise ValueError(f'Nome de arquivo invalido: {cei_file_name}')
 
-        return cei_file_type, cei_file_date
+        return cei_file_type, cei_file_date.date()
     else:
         raise ValueError(f'Nome de arquivo invalido: {cei_file_name}')
 
