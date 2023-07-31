@@ -7,7 +7,7 @@ from multiprocessing import Pool
 
 import warnings
 
-from fbpyutils import file as FU, xlsx as XL
+from fbpyutils import xlsx as XL, string as SU
 
 
 warnings.simplefilter("ignore")
@@ -314,7 +314,7 @@ def process_schema_posicao_acoes(input_files):
                 xl_dataframe['motivo'] = xl_dataframe['Motivo']
                 xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
                 xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-                xl_dataframe['arquivo_origem'] = schema_file_name
+                xl_dataframe['arquivo_origem'] = SU.normalize_names(f'{schema_file_name}_{xl_sheet}')
                 xl_dataframe['data_referencia'] = schema_file_date
 
                 xl_dataframe = xl_dataframe[fields].copy()
@@ -381,7 +381,10 @@ def process_schema_posicao_emprestimo_ativos(input_files):
                 xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number)
                 xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
                 xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-                xl_dataframe['arquivo_origem'] = schema_file_name
+
+                xl_sheet = 'Empréstimo de Ativos'
+                xl_dataframe['arquivo_origem'] = SU.normalize_names(f'{schema_file_name}_{xl_sheet}')
+
                 xl_dataframe['data_referencia'] = schema_file_date
 
                 xl_dataframe = xl_dataframe[fields].copy()
@@ -439,7 +442,7 @@ def process_schema_posicao_etf(input_files):
             xl_dataframe['motivo'] = xl_dataframe['Motivo']
             xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
             xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
+            xl_dataframe['arquivo_origem'] = SU.normalize_names(f'{schema_file_name}_{xl_sheet}')
             xl_dataframe['data_referencia'] = schema_file_date
 
             xl_dataframe = xl_dataframe[fields].copy()
@@ -499,7 +502,7 @@ def process_schema_posicao_fundos_investimento(input_files):
             xl_dataframe['motivo'] = xl_dataframe['Motivo']
             xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number)
             xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
+            xl_dataframe['arquivo_origem'] = SU.normalize_names(f'{schema_file_name}_{xl_sheet}')
             xl_dataframe['data_referencia'] = schema_file_date
 
             xl_dataframe = xl_dataframe[fields].copy()
@@ -563,7 +566,7 @@ def process_schema_posicao_tesouro_direto(input_files):
             xl_dataframe['valor_bruto'] = xl_dataframe['Valor bruto'].apply(_str_to_number)
             xl_dataframe['valor_liquido'] = xl_dataframe['Valor líquido'].apply(_str_to_number)
             xl_dataframe['valor_atualizado'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
+            xl_dataframe['arquivo_origem'] = SU.normalize_names(f'{schema_file_name}_{xl_sheet}')
             xl_dataframe['data_referencia'] = schema_file_date
 
             xl_dataframe = xl_dataframe[fields].copy()
@@ -633,7 +636,7 @@ def process_schema_posicao_renda_fixa(input_files):
             xl_dataframe['valor_atualizado_mtm'] = xl_dataframe['Valor Atualizado MTM'].apply(_str_to_number)
             xl_dataframe['preco_atualizado_curva'] = xl_dataframe['Preço Atualizado CURVA'].apply(_str_to_number)
             xl_dataframe['valor_atualizado_curva'] = xl_dataframe['Valor Atualizado CURVA'].apply(_str_to_number)
-            xl_dataframe['arquivo_origem'] = schema_file_name
+            xl_dataframe['arquivo_origem'] = SU.normalize_names(f'{schema_file_name}_{xl_sheet}')
             xl_dataframe['data_referencia'] = schema_file_date
 
             xl_dataframe = xl_dataframe[fields].copy()
