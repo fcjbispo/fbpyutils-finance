@@ -35,46 +35,46 @@ _POS_OPERATIONS = (
     'operation': 'produtos', 
     'sql': '''
         select distinct
-            codigo_produto,
-            nome_produto,
-            tipo_produto
+               codigo_produto,
+               nome_produto,
+               tipo_produto
         from (
         select distinct
-            codigo_produto, 
-            nome_produto,
-            'FII' as tipo_produto 
-        from tb_stg_posicao_fundos_investimento
+               codigo_produto, 
+               nome_produto,
+               'FII' as tipo_produto 
+          from tb_stg_posicao_fundos_investimento
         union
         select distinct
-            codigo_produto, 
-            nome_produto,
-            'Ações' as tipo_produto
-        from tb_stg_posicao_acoes
-        where tipo_produto not in ('Recibo', 'Direito')
+               codigo_produto, 
+               nome_produto,
+               'Ações' as tipo_produto
+          from tb_stg_posicao_acoes
+         where tipo_produto not in ('Recibo', 'Direito')
         union
         select distinct
-            codigo_produto, 
-            nome_produto,
-            'ETF' as tipo_produto
-        from tb_stg_posicao_etf
+               codigo_produto, 
+               nome_produto,
+               'ETF' as tipo_produto
+          from tb_stg_posicao_etf
         union
         select distinct
-            codigo_produto, 
-            nome_produto,
-            'Renda Fixa' as tipo_produto
-        from tb_stg_posicao_renda_fixa
+               codigo_produto, 
+               nome_produto,
+               'Renda Fixa' as tipo_produto
+          from tb_stg_posicao_renda_fixa
         union
         select distinct
-            codigo_produto, 
-            nome_produto,
-            'Tesouro Direto' as tipo_produto
-        from tb_stg_posicao_tesouro_direto
+               codigo_produto, 
+               nome_produto,
+               'Tesouro Direto' as tipo_produto
+          from tb_stg_posicao_tesouro_direto
         union
         select distinct
-            codigo_produto, 
-            nome_produto,
-            'Ações' as tipo_produto
-        from tb_stg_posicao_emprestimo_ativos
+               codigo_produto, 
+               nome_produto,
+               'Ações' as tipo_produto
+          from tb_stg_posicao_emprestimo_ativos
         )
         order by 1, 2;
     ''',
@@ -84,72 +84,82 @@ _POS_OPERATIONS = (
     'operation': 'calendario', 
     'sql': '''
         SELECT codigo_produto,
-            instituicao,
-            conta,
-            SUBSTR(data_referencia, 1, 7)       as periodo, 
-            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-            max(arquivo_origem)                 as arquivo_origem 
-        from tb_stg_posicao_tesouro_direto
-        GROUP BY codigo_produto,
-                conta, 
-                SUBSTR(data_referencia, 1, 10)
+               instituicao,
+               conta,
+               SUBSTR(data_referencia, 1, 7) as periodo, 
+               arquivo_origem                as arquivo_origem, 
+               max(data_referencia)          as data_referencia 
+          from tb_stg_posicao_tesouro_direto
+         GROUP BY codigo_produto,
+                  instituicao,
+                  conta,
+                  SUBSTR(data_referencia, 1, 7), 
+                  arquivo_origem
         UNION
         SELECT codigo_produto,
-            instituicao,
-            conta,
-            SUBSTR(data_referencia, 1, 7)       as periodo, 
-            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-            max(arquivo_origem)                 as arquivo_origem 
-        from tb_stg_posicao_renda_fixa
-        GROUP BY codigo_produto, 
-                conta,
-                SUBSTR(data_referencia, 1, 10)
+               instituicao,
+               conta,
+               SUBSTR(data_referencia, 1, 7) as periodo, 
+               arquivo_origem                as arquivo_origem, 
+               max(data_referencia)          as data_referencia 
+          from tb_stg_posicao_renda_fixa
+         GROUP BY codigo_produto,
+                  instituicao,
+                  conta,
+                  SUBSTR(data_referencia, 1, 7), 
+                  arquivo_origem
         UNION
         SELECT codigo_produto,
-            instituicao,
-            conta,
-            SUBSTR(data_referencia, 1, 7)       as periodo, 
-            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-            max(arquivo_origem)                 as arquivo_origem 
-        from tb_stg_posicao_emprestimo_ativos
-        GROUP BY codigo_produto, 
-                conta,
-                SUBSTR(data_referencia, 1, 10)
+               instituicao,
+               conta,
+               SUBSTR(data_referencia, 1, 7) as periodo, 
+               arquivo_origem                as arquivo_origem, 
+               max(data_referencia)          as data_referencia 
+          from tb_stg_posicao_emprestimo_ativos
+         GROUP BY codigo_produto,
+                  instituicao,
+                  conta,
+                  SUBSTR(data_referencia, 1, 7), 
+                  arquivo_origem
         UNION
         SELECT codigo_produto,
-            instituicao,
-            conta,
-            SUBSTR(data_referencia, 1, 7)       as periodo, 
-            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-            max(arquivo_origem)                 as arquivo_origem 
-        from tb_stg_posicao_acoes
-        GROUP BY codigo_produto, 
-                conta,
-                SUBSTR(data_referencia, 1, 10)
+               instituicao,
+               conta,
+               SUBSTR(data_referencia, 1, 7) as periodo, 
+               arquivo_origem                as arquivo_origem, 
+               max(data_referencia)          as data_referencia 
+          from tb_stg_posicao_acoes
+         GROUP BY codigo_produto,
+                  instituicao,
+                  conta,
+                  SUBSTR(data_referencia, 1, 7), 
+                  arquivo_origem
         UNION
-        SELECT codigo_produto, 
-            instituicao,
-            conta,
-            SUBSTR(data_referencia, 1, 7)       as periodo, 
-            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-            max(arquivo_origem)                 as arquivo_origem 
-        from tb_stg_posicao_fundos_investimento
-        GROUP BY codigo_produto, 
-                instituicao,
-                conta,
-                SUBSTR(data_referencia, 1, 7)
+        SELECT codigo_produto,
+               instituicao,
+               conta,
+               SUBSTR(data_referencia, 1, 7) as periodo, 
+               arquivo_origem                as arquivo_origem, 
+               max(data_referencia)          as data_referencia 
+          from tb_stg_posicao_fundos_investimento
+         GROUP BY codigo_produto,
+                  instituicao,
+                  conta,
+                  SUBSTR(data_referencia, 1, 7), 
+                  arquivo_origem
         UNION
-        SELECT codigo_produto, 
-            instituicao,
-            conta,
-            SUBSTR(data_referencia, 1, 7)       as periodo, 
-            max(SUBSTR(data_referencia, 1, 10)) as data_referencia, 
-            max(arquivo_origem)                 as arquivo_origem 
-        from tb_stg_posicao_etf
-        GROUP BY codigo_produto, 
-                instituicao,
-                conta,
-                SUBSTR(data_referencia, 1, 7)
+        SELECT codigo_produto,
+               instituicao,
+               conta,
+               SUBSTR(data_referencia, 1, 7) as periodo, 
+               arquivo_origem                as arquivo_origem, 
+               max(data_referencia)          as data_referencia 
+          from tb_stg_posicao_etf
+         GROUP BY codigo_produto,
+                  instituicao,
+                  conta,
+                  SUBSTR(data_referencia, 1, 7), 
+                  arquivo_origem
         ;
     ''',
     'params': {},
