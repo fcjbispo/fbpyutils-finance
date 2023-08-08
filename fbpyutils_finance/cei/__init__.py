@@ -64,7 +64,7 @@ def _process_operation(operation):
     return (op_name, rows, data)
 
 
-def get_cei_data_pre(input_folder, parallelize=True):
+def get_cei_data(input_folder, parallelize=True):
     """
     Retrieves CEI data from the specified input folder and processes it based on the specified operations.
      Args:
