@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-fbpyutils = {file = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.4.0-py3-none-any.whl"}
+fbpyutils = {file = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.4.1-py3-none-any.whl"}
 requests = "2.28.2"
 
 [dev-packages]

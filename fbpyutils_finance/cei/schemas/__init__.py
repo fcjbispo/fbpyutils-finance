@@ -162,7 +162,7 @@ def process_schema_movimentacao(input_files):
 
         xl_dataframes.append(xl_dataframe)
 
-    return pd.concat(xl_dataframes)
+    return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
 def process_schema_eventos_provisionados(input_files):
@@ -213,7 +213,7 @@ def process_schema_eventos_provisionados(input_files):
 
         xl_dataframes.append(xl_dataframe)
 
-    return pd.concat(xl_dataframes)
+    return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
 def process_schema_negociacao(input_files):
@@ -262,7 +262,7 @@ def process_schema_negociacao(input_files):
 
         xl_dataframes.append(xl_dataframe)
 
-    return pd.concat(xl_dataframes)
+    return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
 def process_schema_posicao_acoes(input_files):
@@ -325,7 +325,7 @@ def process_schema_posicao_acoes(input_files):
 
                 xl_dataframes.append(xl_dataframe)
 
-    return pd.concat(xl_dataframes)
+    return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
 def process_schema_posicao_emprestimo_ativos(input_files):
@@ -396,7 +396,7 @@ def process_schema_posicao_emprestimo_ativos(input_files):
 
                 xl_dataframes.append(xl_dataframe)
 
-    return pd.concat(xl_dataframes)
+    return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
 def process_schema_posicao_etf(input_files):
@@ -456,7 +456,7 @@ def process_schema_posicao_etf(input_files):
 
             xl_dataframes.append(xl_dataframe)
 
-    return pd.concat(xl_dataframes)
+    return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
 def process_schema_posicao_fundos_investimento(input_files):
@@ -518,7 +518,7 @@ def process_schema_posicao_fundos_investimento(input_files):
 
             xl_dataframes.append(xl_dataframe)
 
-    return pd.concat(xl_dataframes)
+    return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
 def process_schema_posicao_tesouro_direto(input_files):
@@ -584,7 +584,7 @@ def process_schema_posicao_tesouro_direto(input_files):
 
             xl_dataframes.append(xl_dataframe)
 
-    return pd.concat(xl_dataframes)
+    return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
 def process_schema_posicao_renda_fixa(input_files):
@@ -656,4 +656,4 @@ def process_schema_posicao_renda_fixa(input_files):
 
             xl_dataframes.append(xl_dataframe)
 
-    return pd.concat(xl_dataframes)
+    return pd.concat(xl_dataframes) if xl_dataframes else None
