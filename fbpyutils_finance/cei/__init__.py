@@ -20,7 +20,7 @@ warnings.simplefilter("ignore")
 
 _OPERATIONS = (
     ('movimentacao', 'movimentacao-*.xlsx', process_schema_movimentacao, True),
-    ('eventos_provisionados', 'eventos-provisionados-*.xlsx', process_schema_eventos_provisionados, True),
+    ('eventos_provisionados', 'eventos-*.xlsx', process_schema_eventos_provisionados, True),
     ('negociacao', 'negociacao-*.xlsx', process_schema_negociacao, True),
     ('posicao_acoes', 'posicao-*.xlsx', process_schema_posicao_acoes, True),
     ('posicao_emprestimo_ativos', 'posicao-*.xlsx', process_schema_posicao_emprestimo_ativos, True),
