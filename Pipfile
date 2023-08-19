@@ -4,15 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+requests = "==2.28.2"
+pandas = "==2.0.3"
 fbpyutils = {file = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.4.1-py3-none-any.whl"}
-requests = "2.28.2"
 
 [dev-packages]
 ipykernel = "*"
 black = "*"
 autopep8 = "*"
 vistir = "==0.6.1"
-pipenv-setup = "*"
 jupytext = "*"
+pipenv-setup = "*"
 
 [requires]

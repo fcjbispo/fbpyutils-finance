@@ -141,7 +141,7 @@ def process_schema_movimentacao(input_files):
         xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
 
         xl_dataframe['entrada_saida'] = xl_dataframe['Entrada/Saída']
-        xl_dataframe['data_movimentacao'] = xl_dataframe['Data'].apply(_str_to_date)
+        xl_dataframe['data_movimentacao'] = pd.to_datetime(xl_dataframe['Data'].apply(_str_to_date), errors='coerce')
         xl_dataframe['movimentacao'] = xl_dataframe['Movimentação']
         xl_dataframe['nome_produto'] = xl_dataframe['Produto'].apply(_deal_double_spaces)
         xl_dataframe['codigo_produto'] = xl_dataframe['nome_produto'].apply(_extract_product_id)
@@ -152,9 +152,9 @@ def process_schema_movimentacao(input_files):
         else:
             xl_dataframe['conta'] = '000000000'
         
-        xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number).astype('float64')
-        xl_dataframe['preco_unitario'] = xl_dataframe['Preço unitário'].apply(_str_to_number).astype('float64')
-        xl_dataframe['valor_operacao'] = xl_dataframe['Valor da Operação'].apply(_str_to_number).astype('float64')
+        xl_dataframe['quantidade'] = pd.to_numeric(xl_dataframe['Quantidade'], errors='coerce')
+        xl_dataframe['preco_unitario'] = pd.to_numeric(xl_dataframe['Preço unitário'], errors='coerce')
+        xl_dataframe['valor_operacao'] = pd.to_numeric(xl_dataframe['Valor da Operação'], errors='coerce')
         xl_dataframe['arquivo_origem'] = schema_file_name
         xl_dataframe['data_referencia'] = schema_file_date
 
@@ -195,7 +195,7 @@ def process_schema_eventos_provisionados(input_files):
         xl_dataframe['codigo_produto'] = xl_dataframe['nome_produto'].apply(_extract_product_id)
         xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
         xl_dataframe['tipo_evento'] = xl_dataframe['Tipo de Evento']
-        xl_dataframe['previsao_pagamento'] = xl_dataframe['Previsão de pagamento'].apply(_str_to_date)
+        xl_dataframe['previsao_pagamento'] = pd.to_datetime(xl_dataframe['Previsão de pagamento'].apply(_str_to_date), errors='coerce')
         xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
 
         if 'Conta' in xl_dataframe.columns:
@@ -203,9 +203,9 @@ def process_schema_eventos_provisionados(input_files):
         else:
             xl_dataframe['conta'] = '000000000'
 
-        xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number).astype('float64')
-        xl_dataframe['preco_unitario'] = xl_dataframe['Preço unitário'].apply(_str_to_number).astype('float64')
-        xl_dataframe['valor_operacao'] = xl_dataframe['Valor líquido'].apply(_str_to_number).astype('float64')
+        xl_dataframe['quantidade'] = pd.to_numeric(xl_dataframe['Quantidade'], errors='coerce')
+        xl_dataframe['preco_unitario'] = pd.to_numeric(xl_dataframe['Preço unitário'], errors='coerce')
+        xl_dataframe['valor_operacao'] = pd.to_numeric(xl_dataframe['Valor líquido'], errors='coerce')
         xl_dataframe['arquivo_origem'] = schema_file_name
         xl_dataframe['data_referencia'] = schema_file_date
 
@@ -240,10 +240,10 @@ def process_schema_negociacao(input_files):
         xl_table = _tuple_as_str(tuple(xl_obj.read_sheet_by_index(0)))
         xl_dataframe = pd.DataFrame(xl_table[1:], columns=xl_table[0])
 
-        xl_dataframe['data_negocio'] = xl_dataframe['Data do Negócio'].apply(_str_to_date)
+        xl_dataframe['data_negocio'] = pd.to_datetime(xl_dataframe['Data do Negócio'].apply(_str_to_date), errors='coerce')
         xl_dataframe['movimentacao'] = xl_dataframe['Tipo de Movimentação']
         xl_dataframe['mercado'] = xl_dataframe['Mercado']
-        xl_dataframe['prazo_vencimento'] = xl_dataframe['Prazo/Vencimento'].apply(_str_to_date)
+        xl_dataframe['prazo_vencimento'] = pd.to_datetime(xl_dataframe['Prazo/Vencimento'].apply(_str_to_date), errors='coerce')
         xl_dataframe['instituicao'] = xl_dataframe['Instituição'].apply(_deal_double_spaces)
 
         if 'Conta' in xl_dataframe.columns:
@@ -252,9 +252,9 @@ def process_schema_negociacao(input_files):
             xl_dataframe['conta'] = '000000000'
 
         xl_dataframe['codigo_produto'] = xl_dataframe['Código de Negociação']
-        xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number).astype('float64')
-        xl_dataframe['preco_unitario'] = xl_dataframe['Preço'].apply(_str_to_number).astype('float64')
-        xl_dataframe['valor_operacao'] = xl_dataframe['Valor'].apply(_str_to_number).astype('float64')
+        xl_dataframe['quantidade'] = pd.to_numeric(xl_dataframe['Quantidade'], errors='coerce')
+        xl_dataframe['preco_unitario'] = pd.to_numeric(xl_dataframe['Preço'], errors='coerce')
+        xl_dataframe['valor_operacao'] = pd.to_numeric(xl_dataframe['Valor'], errors='coerce')
         xl_dataframe['arquivo_origem'] = schema_file_name
         xl_dataframe['data_referencia'] = schema_file_date
 
@@ -310,12 +310,12 @@ def process_schema_posicao_acoes(input_files):
                 xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
                 xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
                 xl_dataframe['escriturador'] = xl_dataframe['Escriturador'].apply(_deal_double_spaces)
-                xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number).astype('float64')
-                xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number).astype('float64')
-                xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number).astype('float64')
+                xl_dataframe['quantidade'] = pd.to_numeric(xl_dataframe['Quantidade'], errors='coerce')
+                xl_dataframe['quantidade_disponivel'] = pd.to_numeric(xl_dataframe['Quantidade Disponível'], errors='coerce')
+                xl_dataframe['quantidade_indisponivel'] = pd.to_numeric(xl_dataframe['Quantidade Indisponível'], errors='coerce')
                 xl_dataframe['motivo'] = xl_dataframe['Motivo']
-                xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number).astype('float64')
-                xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number).astype('float64')
+                xl_dataframe['preco_unitario'] = pd.to_numeric(xl_dataframe['Preço de Fechamento'], errors='coerce')
+                xl_dataframe['valor_operacao'] = pd.to_numeric(xl_dataframe['Valor Atualizado'], errors='coerce')
 
                 xl_dataframe['arquivo_origem'] = SU.normalize_names([f'{schema_file_name}_{xl_sheet}'])[0]
 
@@ -378,13 +378,13 @@ def process_schema_posicao_emprestimo_ativos(input_files):
                 xl_dataframe['modalidade'] = xl_dataframe['Modalidade'].apply(_deal_double_spaces)
                 xl_dataframe['opa'] = xl_dataframe['OPA'].apply(_deal_double_spaces)
                 xl_dataframe['liquidacao_antecipada'] = xl_dataframe['Liquidação antecipada'].apply(_deal_double_spaces)
-                xl_dataframe['taxa'] = xl_dataframe['Taxa'].apply(_str_to_number).astype('float64')
-                xl_dataframe['comissao'] = xl_dataframe['Comissão'].apply(_str_to_number).astype('float64')
-                xl_dataframe['data_registro'] = xl_dataframe['Data de registro'].apply(_str_to_date)
-                xl_dataframe['data_vencimento'] = xl_dataframe['Data de vencimento'].apply(_str_to_date)
-                xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number).astype('float64')
-                xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number).astype('float64')
-                xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number).astype('float64')
+                xl_dataframe['taxa'] = pd.to_numeric(xl_dataframe['Taxa'], errors='coerce')
+                xl_dataframe['comissao'] = pd.to_numeric(xl_dataframe['Comissão'], errors='coerce')
+                xl_dataframe['data_registro'] = pd.to_datetime(xl_dataframe['Data de registro'].apply(_str_to_date), errors='coerce')
+                xl_dataframe['data_vencimento'] = pd.to_datetime(xl_dataframe['Data de vencimento'].apply(_str_to_date), errors='coerce')
+                xl_dataframe['quantidade'] = pd.to_numeric(xl_dataframe['Quantidade'], errors='coerce')
+                xl_dataframe['preco_unitario'] = pd.to_numeric(xl_dataframe['Preço de Fechamento'], errors='coerce')
+                xl_dataframe['valor_operacao'] = pd.to_numeric(xl_dataframe['Valor Atualizado'], errors='coerce')
 
                 xl_sheet = 'Empréstimo de Ativos'
                 xl_dataframe['arquivo_origem'] = SU.normalize_names([f'{schema_file_name}_{xl_sheet}'])[0]
@@ -441,12 +441,12 @@ def process_schema_posicao_etf(input_files):
 
             xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
             xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number).astype('float64')
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number).astype('float64')
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number).astype('float64')
+            xl_dataframe['quantidade'] = pd.to_numeric(xl_dataframe['Quantidade'], errors='coerce')
+            xl_dataframe['quantidade_disponivel'] = pd.to_numeric(xl_dataframe['Quantidade Disponível'], errors='coerce')
+            xl_dataframe['quantidade_indisponivel'] = pd.to_numeric(xl_dataframe['Quantidade Indisponível'], errors='coerce')
             xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number).astype('float64')
-            xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number).astype('float64')
+            xl_dataframe['preco_unitario'] = pd.to_numeric(xl_dataframe['Preço de Fechamento'], errors='coerce')
+            xl_dataframe['valor_operacao'] = pd.to_numeric(xl_dataframe['Valor Atualizado'], errors='coerce')
 
             xl_dataframe['arquivo_origem'] = SU.normalize_names([f'{schema_file_name}_{xl_sheet}'])[0]
 
@@ -503,12 +503,12 @@ def process_schema_posicao_fundos_investimento(input_files):
             xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN / Distribuição']
             xl_dataframe['tipo_produto'] = xl_dataframe['Tipo']
             xl_dataframe['administrador'] = xl_dataframe['Administrador'].apply(_deal_double_spaces)
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number).astype('float64')
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number).astype('float64')
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number).astype('float64')
+            xl_dataframe['quantidade'] = pd.to_numeric(xl_dataframe['Quantidade'], errors='coerce')
+            xl_dataframe['quantidade_disponivel'] = pd.to_numeric(xl_dataframe['Quantidade Disponível'], errors='coerce')
+            xl_dataframe['quantidade_indisponivel'] = pd.to_numeric(xl_dataframe['Quantidade Indisponível'], errors='coerce')
             xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['preco_unitario'] = xl_dataframe['Preço de Fechamento'].apply(_str_to_number).astype('float64')
-            xl_dataframe['valor_operacao'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number).astype('float64')
+            xl_dataframe['preco_unitario'] = pd.to_numeric(xl_dataframe['Preço de Fechamento'], errors='coerce')
+            xl_dataframe['valor_operacao'] = pd.to_numeric(xl_dataframe['Valor Atualizado'], errors='coerce')
 
             xl_dataframe['arquivo_origem'] = SU.normalize_names([f'{schema_file_name}_{xl_sheet}'])[0]
 
@@ -566,15 +566,15 @@ def process_schema_posicao_tesouro_direto(input_files):
 
             xl_dataframe['codigo_isin'] = xl_dataframe['Código ISIN']
             xl_dataframe['indexador'] = xl_dataframe['Indexador']
-            xl_dataframe['vencimento'] = xl_dataframe['Vencimento'].apply(_str_to_date)
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number).astype('float64')
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number).astype('float64')
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number).astype('float64')
+            xl_dataframe['vencimento'] = pd.to_datetime(xl_dataframe['Vencimento'].apply(_str_to_date), errors='coerce')
+            xl_dataframe['quantidade'] = pd.to_numeric(xl_dataframe['Quantidade'], errors='coerce')
+            xl_dataframe['quantidade_disponivel'] = pd.to_numeric(xl_dataframe['Quantidade Disponível'], errors='coerce')
+            xl_dataframe['quantidade_indisponivel'] = pd.to_numeric(xl_dataframe['Quantidade Indisponível'], errors='coerce')
             xl_dataframe['motivo'] = xl_dataframe['Motivo']
-            xl_dataframe['valor_aplicado'] = xl_dataframe['Valor Aplicado'].apply(_str_to_number).astype('float64')
-            xl_dataframe['valor_bruto'] = xl_dataframe['Valor bruto'].apply(_str_to_number).astype('float64')
-            xl_dataframe['valor_liquido'] = xl_dataframe['Valor líquido'].apply(_str_to_number).astype('float64')
-            xl_dataframe['valor_atualizado'] = xl_dataframe['Valor Atualizado'].apply(_str_to_number).astype('float64')
+            xl_dataframe['valor_aplicado'] = pd.to_numeric(xl_dataframe['Valor Aplicado'], errors='coerce')
+            xl_dataframe['valor_bruto'] = pd.to_numeric(xl_dataframe['Valor bruto'], errors='coerce')
+            xl_dataframe['valor_liquido'] = pd.to_numeric(xl_dataframe['Valor líquido'], errors='coerce')
+            xl_dataframe['valor_atualizado'] = pd.to_numeric(xl_dataframe['Valor Atualizado'], errors='coerce')
 
             xl_dataframe['arquivo_origem'] = SU.normalize_names([f'{schema_file_name}_{xl_sheet}'])[0]
 
@@ -636,17 +636,17 @@ def process_schema_posicao_renda_fixa(input_files):
             xl_dataframe['emissor'] = xl_dataframe['Emissor'].apply(_deal_double_spaces)
             xl_dataframe['indexador'] = xl_dataframe['Indexador'].apply(_deal_double_spaces)
             xl_dataframe['tipo_regime'] = xl_dataframe['Tipo de regime']
-            xl_dataframe['emissao'] = xl_dataframe['Data de Emissão'].apply(_str_to_date)
-            xl_dataframe['vencimento'] = xl_dataframe['Vencimento'].apply(_str_to_date)
-            xl_dataframe['quantidade'] = xl_dataframe['Quantidade'].apply(_str_to_number).astype('float64')
-            xl_dataframe['quantidade_disponivel'] = xl_dataframe['Quantidade Disponível'].apply(_str_to_number).astype('float64')
-            xl_dataframe['quantidade_indisponivel'] = xl_dataframe['Quantidade Indisponível'].apply(_str_to_number).astype('float64')
+            xl_dataframe['emissao'] = pd.to_datetime(xl_dataframe['Data de Emissão'].apply(_str_to_date), errors='coerce')
+            xl_dataframe['vencimento'] = pd.to_datetime(xl_dataframe['Vencimento'].apply(_str_to_date), errors='coerce')
+            xl_dataframe['quantidade'] = pd.to_numeric(xl_dataframe['Quantidade'], errors='coerce')
+            xl_dataframe['quantidade_disponivel'] = pd.to_numeric(xl_dataframe['Quantidade Disponível'], errors='coerce')
+            xl_dataframe['quantidade_indisponivel'] = pd.to_numeric(xl_dataframe['Quantidade Indisponível'], errors='coerce')
             xl_dataframe['motivo'] = xl_dataframe['Motivo']
             xl_dataframe['contraparte'] = xl_dataframe['Contraparte']
-            xl_dataframe['preco_atualizado_mtm'] = xl_dataframe['Preço Atualizado MTM'].apply(_str_to_number).astype('float64')
-            xl_dataframe['valor_atualizado_mtm'] = xl_dataframe['Valor Atualizado MTM'].apply(_str_to_number).astype('float64')
-            xl_dataframe['preco_atualizado_curva'] = xl_dataframe['Preço Atualizado CURVA'].apply(_str_to_number).astype('float64')
-            xl_dataframe['valor_atualizado_curva'] = xl_dataframe['Valor Atualizado CURVA'].apply(_str_to_number).astype('float64')
+            xl_dataframe['preco_atualizado_mtm'] = pd.to_numeric(xl_dataframe['Preço Atualizado MTM'], errors='coerce')
+            xl_dataframe['valor_atualizado_mtm'] = pd.to_numeric(xl_dataframe['Valor Atualizado MTM'], errors='coerce')
+            xl_dataframe['preco_atualizado_curva'] = pd.to_numeric(xl_dataframe['Preço Atualizado CURVA'], errors='coerce')
+            xl_dataframe['valor_atualizado_curva'] = pd.to_numeric(xl_dataframe['Valor Atualizado CURVA'], errors='coerce')
 
             xl_dataframe['arquivo_origem'] = SU.normalize_names([f'{schema_file_name}_{xl_sheet}'])[0]
 
