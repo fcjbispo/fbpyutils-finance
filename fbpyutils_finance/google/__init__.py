@@ -146,14 +146,13 @@ def exchange_rate(
 
 
 def stock_price(
-    x: str, market: str='BVMF'
+    x: str, market: str=None
 ) -> Dict:
     '''
         Performs a Google search for the current price of the supplied ticker in the default market.
         Parameters:
             x (str): The ticker to search for the current price.
-            market (str): The name of the market on which the ticker will be searched. Default=BVMF. 
-                        This version only supports the Brazilian BVMF market.
+            market (str, Optional): The name of the market on which the ticker will be searched.
         Returns:
             dict: A standard dictionary with the stock price and information for the supplied ticker.
     '''
@@ -168,14 +167,9 @@ def stock_price(
         if not x:
             raise ValueError('Ticker is required')
 
-        market = market or 'BVMF'
+        token, ticker = 'Preço das ações', x.upper()
 
-        token, ticker, market = 'Preço das ações', x.upper(), market.upper()
-
-        if market not in ['BVMF']:
-            raise ValueError('Unsupported market: {}'.format(market))
-
-        search = ' '.join([ticker, market])
+        search = ':'.join([market.upper(), ticker]) if market else ticker
 
         response = _googlesearch(search)
 
@@ -201,6 +195,14 @@ def stock_price(
 
         if not ticker_name_out:
             raise ValueError('Unable to parse info: {}'.format('Ticker Name'))
+        
+        # market if not provided
+        if not market:
+            for e in soup.find_all( "span" , class_='r0bn4c rQMQod' ):
+                search_string = e.text
+                if f'{ticker}(' in search_string:
+                    market = search_string.split('(')[-1][:-1]
+                    break
 
         # price, variation, variation_percent, trend_out
         price_info = soup.findAll(name='div', class_="BNeawe iBp4i AP7Wnd")
