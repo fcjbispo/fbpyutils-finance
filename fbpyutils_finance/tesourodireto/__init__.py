@@ -99,19 +99,24 @@ def treasury_bonds(x: str=None) -> Dict:
 
         bonds = [
             {
-                'bond_name': b['TrsrBd'].get('nm'),
-                'due_date': datetime.fromisoformat(b['TrsrBd'].get('mtrtyDt')),
-                'financial_indexer': b['TrsrBd'].get('FinIndxs', {}).get('nm'), 
-                'annual_investment_rate': b['TrsrBd'].get('anulInvstmtRate'),
-                'annual_redemption_rate': b['TrsrBd'].get('anulRedRate'),
-                'isin_code': b['TrsrBd'].get('isinCd'),
-                'sell_price': b['TrsrBd'].get('untrRedVal'),
-                'sell_price_unit': b['TrsrBd'].get('minRedVal'),
-                'buy_price': b['TrsrBd'].get('untrInvstmtVal'),
-                'buy_price_unit': b['TrsrBd'].get('minInvstmtAmt'),
-                'extended_description': ' '.join([b['TrsrBd'].get('featrs'), b['TrsrBd'].get('invstmtStbl')]).replace('\r\n', '')
+                'bond_name': b.get('TrsrBd', {}).get('nm'),
+                'due_date': datetime.fromisoformat(b.get('TrsrBd', {}).get('mtrtyDt')),
+                'financial_indexer': b.get('TrsrBd', {}).get('FinIndxs', {}).get('nm'), 
+                'annual_investment_rate': b.get('TrsrBd', {}).get('anulInvstmtRate'),
+                'annual_redemption_rate': b.get('TrsrBd', {}).get('anulRedRate'),
+                'isin_code': b.get('TrsrBd', {}).get('isinCd'),
+                'sell_price': b.get('TrsrBd', {}).get('untrRedVal'),
+                'sell_price_unit': b.get('TrsrBd', {}).get('minRedVal'),
+                'buy_price': b.get('TrsrBd', {}).get('untrInvstmtVal'),
+                'buy_price_unit': b.get('TrsrBd', {}).get('minInvstmtAmt'),
+                'extended_description': ' '.join([
+                     str(b.get('TrsrBd', {}).get('featrs', 'NA')), 
+                     str(b.get('TrsrBd', {}).get('invstmtStbl', 'NA'))
+                ]).replace('\r\n', '').replace('NoneType', 'NA')
             } 
-            for b in response_data['TrsrBdTradgList'] if b['TrsrBd'].get('nm', 'NA') == x or x is None
+            for b in response_data.get('TrsrBdTradgList', {}) if b and (
+                b.get('TrsrBd', {}).get('nm', 'NA') == x or x is None
+            )
         ]
 
         if len(bonds) == 0:
