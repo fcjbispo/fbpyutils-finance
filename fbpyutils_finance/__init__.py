@@ -18,6 +18,23 @@ CERTIFICATES = {
     for f in F.find(APP_FOLDER, '*.pem')
 }
 
+MARKET_INFO = [
+        {
+            'region': 'América', 
+            'market': 'BVMF', 
+            'name': 'B3 - Bolsa de Valores do Brasil e Mercado de balcão', 
+            'delay': '15', 
+            'timezone': 'America/Sao_Paulo' 
+        },
+        {'region': 'América', 'market': 'NASDAQ', 'name': 'NASDAQ Last Sale', 'delay': 'Em tempo real*', 'timezone': 'America/New_York' },
+        {'region': 'América', 'market': 'NYSE', 'name': 'NYSE', 'delay': 'Em tempo real*', 'timezone': 'America/New_York' },
+        {'region': 'América', 'market': 'NYSEARCA', 'name': 'NYSE ARCA', 'delay': 'Em tempo real*', 'timezone': 'America/New_York' },
+        {'region': 'América', 'market': 'NYSEAMERICAN', 'name': 'NYSE American', 'delay': 'Em tempo real*', 'timezone': 'America/New_York' },
+]
+
+numberize = lambda x: float(x.replace(".", "").replace(",", "."))
+
+first_or_none = lambda x: None if len(x) == 0 else x[0]
 
 def is_valid_db_connection(conn):
     """

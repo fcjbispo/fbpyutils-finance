@@ -10,23 +10,13 @@ import requests
 import datetime
 from bs4 import BeautifulSoup
 
-_market_info = [
-        {
-            'region': 'América', 
-            'market': 'BVMF', 
-            'name': 'B3 - Bolsa de Valores do Brasil e Mercado de balcão', 
-            'delay': '15', 
-            'timezone': 'America/Sao_Paulo' 
-        },
-        {'region': 'América', 'market': 'NASDAQ', 'name': 'NASDAQ Last Sale', 'delay': 'Em tempo real*', 'timezone': 'America/New_York' },
-        {'region': 'América', 'market': 'NYSE', 'name': 'NYSE', 'delay': 'Em tempo real*', 'timezone': 'America/New_York' },
-        {'region': 'América', 'market': 'NYSEARCA', 'name': 'NYSE ARCA', 'delay': 'Em tempo real*', 'timezone': 'America/New_York' },
-        {'region': 'América', 'market': 'NYSEAMERICAN', 'name': 'NYSE American', 'delay': 'Em tempo real*', 'timezone': 'America/New_York' },
-]
+from fbpyutils_finance import MARKET_INFO, first_or_none, numberize
 
-_numberize = lambda x: float(x.replace(".", "").replace(",", "."))
+_market_info = MARKET_INFO
 
-_first_or_none = lambda x: None if len(x) == 0 else x[0]
+_numberize = numberize
+
+_first_or_none = first_or_none
 
 def _makeurl(x):
     '''
