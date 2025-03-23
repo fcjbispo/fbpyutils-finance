@@ -182,7 +182,10 @@ def stock_return_rate(current: float, previous: float) -> float:
     return current / previous - 1
 
 
-def stock_adjusted_return_rate(current: float, previous: float, factor: float = 1, dividend_yeld: float = 0, tax: float = 2) -> float:
+def stock_adjusted_return_rate(
+        current: float, previous: float, factor: float = 1,
+        dividend_yeld: float = 0, tax: float = 2
+) -> float:
     """
     Calculates the adjusted return rate of a stock, considering factors like dividends and taxes.
      Arguments:
@@ -209,7 +212,9 @@ def stock_adjusted_return_rate(current: float, previous: float, factor: float = 
     return (current * factor) / (previous - dividend_yeld) - 1
 
 
-def stock_adjusted_price(adjusted: float, adjusted_return_rate: float) -> float:
+def stock_adjusted_price(
+        adjusted: float, adjusted_return_rate: float
+) -> float:
     """
     Calculates the adjusted price of a stock based on the adjusted return rate.
      Arguments:
@@ -221,7 +226,8 @@ def stock_adjusted_price(adjusted: float, adjusted_return_rate: float) -> float:
     return adjusted / (1 + adjusted_return_rate)
 
 
-def stock_adjusted_return_rate_check(current: float, previous_adjusted: float) -> float:
+def stock_adjusted_return_rate_check(
+        current: float, previous_adjusted: float) -> float:
     """
     Calculates the return rate of a stock based on the current price and the previous adjusted price.
      Arguments:

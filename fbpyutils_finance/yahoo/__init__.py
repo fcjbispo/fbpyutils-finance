@@ -25,7 +25,7 @@ import requests
 import datetime
 from bs4 import BeautifulSoup
 
-from fbpyutils_finance import MARKET_INFO, first_or_none, numberize, random_header
+from fbpyutils.finance import MARKET_INFO, first_or_none, numberize, random_header
 
 
 # -
@@ -88,7 +88,7 @@ def stock_price(
         response = _ysearch(ticker)
 
         if response.status_code != 200:
-            raise ValueError(f'Yahoo Search Fail: {search}, {response.status_code}')
+            raise ValueError(f'Yahoo Search Fail: {ticker}, {response.status_code}')
 
         soup = BeautifulSoup(response.text, "html.parser")
 
@@ -134,10 +134,3 @@ def stock_price(
         }
     
     return result
-
-
-ticker = 'ICAP'
-
-stock_price(ticker)
-
-
