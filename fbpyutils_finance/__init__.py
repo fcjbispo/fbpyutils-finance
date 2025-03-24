@@ -7,6 +7,9 @@ https://www.youtube.com/watch?v=JOqK2EGdxbQ
 '''
 import os
 import random
+import pandas as pd
+from pandas import DataFrame
+
 from fbpyutils import file as F
 
 
@@ -34,11 +37,11 @@ MARKET_INFO = [
 ]
 
 
-numberize = lambda x: float(x.replace(".", "").replace(",", "."))
+
+numberize = lambda x: float(x.replace(",", ""))
 
 
 first_or_none = lambda x: None if len(x) == 0 else x[0]
-
 
 def random_header():
     _headers = [
@@ -271,6 +274,56 @@ def stock_event_factor(expression: str) -> tuple:
         return event, factor
     else:
         raise ValueError('Invalid expression {}'.format(expression))
+    
+
+def get_investment_table(df: DataFrame, investment_amount: float) -> DataFrame:
+    """
+    Calculate investment metrics for a DataFrame of financial assets.
+
+    Parameters:
+    - df: DataFrame containing the columns 'Ticker' (str), 'Price' (float), 
+          'Quantity' (float), 'Average Price' (float).
+    - investment_amount: Total investment amount (float).
+
+    Returns:
+    - DataFrame with additional columns: 'Profit/Loss' (float), 
+      'Adjusted Profit/Loss' (float), 'Weight' (float), 'Proportion' (float), 
+      'Investment Value' (float), 'Quantity to Buy' (float).
+
+    Raises:
+    - ValueError: If the DataFrame is missing any required columns ('Ticker', 
+      'Price', 'Quantity', 'Average Price').
+    """
+    # Define required columns
+    required_columns = {'Ticker', 'Price', 'Quantity', 'Average Price'}
+    
+    # Check for missing columns
+    missing_columns = required_columns - set(df.columns)
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
+    
+    # Calculate Profit/Loss
+    df['Profit/Loss'] = (df['Price'] - df['Average Price']) * df['Quantity']
+    
+    # Calculate Adjusted Profit/Loss (minimum value adjusted to zero)
+    min_profit_loss: float = df['Profit/Loss'].min()
+    df['Adjusted Profit/Loss'] = df['Profit/Loss'] - min_profit_loss
+    
+    # Calculate Weight (using k = 0.01 to avoid division by zero)
+    k: float = 0.01
+    df['Weight'] = 1 / (df['Adjusted Profit/Loss'] + k)
+    
+    # Calculate Proportion (normalize weights to sum to 1)
+    total_weights: float = df['Weight'].sum()
+    df['Proportion'] = df['Weight'] / total_weights
+    
+    # Calculate Investment Value (distribute total value according to proportion)
+    df['Investment Value'] = df['Proportion'] * investment_amount
+    
+    # Calculate Quantity to Buy
+    df['Quantity to Buy'] = df['Investment Value'] / df['Price']
+    
+    return df
     
 
 if not os.path.exists(USER_APP_FOLDER):

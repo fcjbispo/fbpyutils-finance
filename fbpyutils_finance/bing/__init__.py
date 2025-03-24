@@ -14,26 +14,29 @@
 
 from fbpyutils import debug
 
-from fbpyutils.datetime import apply_timezone
-
 from typing import Dict
 import requests 
 import datetime
 from bs4 import BeautifulSoup
 
-from fbpyutils.finance import MARKET_INFO, first_or_none, numberize
+from fbpyutils_finance import MARKET_INFO, first_or_none, numberize
 
 
 # -
 
-def _makeurl(x):
+def _makeurl(x: str) -> str:
+    '''Build a Bing search URL from query string.
+    
+    Args:
+        x: Search query to convert into URL
+        
+    Returns:
+        Formatted Bing search URL
+        
+    Example:
+        >>> _makeurl("test query")
+        'https://www.bing.com/search?q=test+query&qs=n&form=QBRE&sp=-1'
     '''
-        Build default Bing search URL output.
-        Parameters:
-            x (str): The search query string
-        Returns:
-            str: A string with a full Google search URL from the search query.
-    '''    
     q = '+'.join(x.split())
     url = f"https://www.bing.com/search?q={q}&qs=n&form=QBRE&sp=-1"
     return url

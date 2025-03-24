@@ -1,12 +1,16 @@
 [project]
 name = "fbpyutils-finance"
-version = "0.1.0"
+version = "1.4.0"
 description = "Francisco Bispo's utilities for Financial Operations"
 authors = [
     { name = "Francisco C J Bispo", email = "fcjbispo@gmail.com" }
 ]
-requires-python = ">=3.11"
-dependencies = []
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "fbpyutils",
+    "pytest-mock>=3.14.0",
+    "requests>=2.32.3",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -17,4 +21,8 @@ dev = [
     "mock>=5.2.0",
     "pytest>=8.3.5",
     "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
 ]
+
+[tool.uv.sources]
+fbpyutils = { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.0-py3-none-any.whl" }
