@@ -8,6 +8,7 @@ authors = [
 requires-python = ">=3.11,<4.0"
 dependencies = [
     "fbpyutils",
+    "yfinance>=0.2.54",
     "pytest-mock>=3.14.0",
     "requests>=2.32.3",
 ]
