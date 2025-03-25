@@ -1,17 +1,3 @@
-# ---
-# jupyter:
-#   jupytext:
-#     text_representation:
-#       extension: .py
-#       format_name: light
-#       format_version: '1.5'
-#       jupytext_version: 1.14.7
-#   kernelspec:
-#     display_name: fbpyutils-finance--TrezB8H
-#     language: python
-#     name: python3
-# ---
-
 from fbpyutils import debug
 
 from typing import Dict
@@ -25,31 +11,33 @@ from fbpyutils_finance import MARKET_INFO, first_or_none, numberize
 # -
 
 def _makeurl(x: str) -> str:
-    '''Build a Bing search URL from query string.
-    
+    """
+    Build a Bing search URL from query string.
+
     Args:
-        x: Search query to convert into URL
-        
+        x (str): Search query to convert into URL
+
     Returns:
-        Formatted Bing search URL
-        
+        str: Formatted Bing search URL
+
     Example:
         >>> _makeurl("test query")
         'https://www.bing.com/search?q=test+query&qs=n&form=QBRE&sp=-1'
-    '''
+    """
     q = '+'.join(x.split())
     url = f"https://www.bing.com/search?q={q}&qs=n&form=QBRE&sp=-1"
     return url
 
-
 def _bingsearch(x: str) -> requests.models.Response:
-    '''
-        Performs a default Bing search using custom headers.
-        Parameters:
-            x (str): The search query string
-        Returns:
-            http response: An HTTP response with the HTML page resulting from the search query.
-    '''
+    """
+    Performs a default Bing search using custom headers.
+
+    Args:
+        x (str): The search query string
+
+    Returns:
+        requests.models.Response: An HTTP response with the HTML page resulting from the search query.
+    """
     h = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -64,6 +52,7 @@ def _bingsearch(x: str) -> requests.models.Response:
     url = _makeurl(x)
     r = s.get(url, headers=h)
 
+    return r
     return r
 
 
