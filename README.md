@@ -18,25 +18,93 @@ It aims to simplify common financial tasks and provide easy access to financial 
 ```bash
 pip install fbpyutils-finance
 ```
-## Usage
 
-### Example 1: Get stock price from Yahoo Finance
-```python
-from fbpyutils_finance.yahoo import stock_price
+## References
 
-ticker = "AAPL" # Example ticker
-price = stock_price(ticker, market="US") # US market
-print(f"The current price of {ticker} is: {price}")
-```
+The interest rate conversion formulas are based on concepts explained in:
 
-### Example 2: Convert daily rate to annual rate
-```python
-from fbpyutils_finance import rate_daily_to_annual
+-   [Clube dos Poupadores - Calculadora de Taxas Equivalentes](https://clubedospoupadores.com/educacao-financeira/calculadora-taxa.html)
+-   [YouTube - Taxas Equivalentes](https://www.youtube.com/watch?v=JOqK2EGdxbQ)
+## Usage / Core Functions
 
-daily_rate = 0.0001 # Example daily rate
-annual_rate = rate_daily_to_annual(daily_rate) # Convert to annual rate
-print(f"The annual rate for a daily rate of {daily_rate} is: {annual_rate}")
-```
+This section details the core utility and calculation functions available directly under `fbpyutils_finance`.
+
+### Interest Rate Conversions
+
+These functions convert interest rates between daily, monthly, and annual periods, assuming compound interest and standard day counts (30 days/month, 360 days/year).
+
+*   **`rate_daily_to_monthly(rate: float) -> float`**
+    *   Converts a daily interest rate to its equivalent monthly rate.
+    *   Formula: `(1 + daily_rate) ** 30 - 1`
+*   **`rate_monthly_to_daily(rate: float) -> float`**
+    *   Converts a monthly interest rate to its equivalent daily rate.
+    *   Formula: `(1 + monthly_rate) ** (1 / 30) - 1`
+*   **`rate_monthly_to_annual(rate: float) -> float`**
+    *   Converts a monthly interest rate to its equivalent annual rate.
+    *   Formula: `(1 + monthly_rate) ** 12 - 1`
+*   **`rate_annual_to_monthly(rate: float) -> float`**
+    *   Converts an annual interest rate to its equivalent monthly rate.
+    *   Formula: `(1 + annual_rate) ** (1 / 12) - 1`
+*   **`rate_annual_to_daily(rate: float) -> float`**
+    *   Converts an annual interest rate to its equivalent daily rate.
+    *   Formula: `(1 + annual_rate) ** (1 / 360) - 1`
+*   **`rate_daily_to_annual(rate: float) -> float`**
+    *   Converts a daily interest rate to its equivalent annual rate.
+    *   Formula: `(1 + daily_rate) ** 360 - 1`
+
+### Stock Calculations
+
+Functions for calculating stock returns and handling price adjustments.
+
+*   **`stock_return_rate(current: float, previous: float) -> float | None`**
+    *   Calculates the simple return rate between two prices.
+    *   Formula: `current / previous - 1`
+    *   Returns `None` if `previous` is `None`.
+*   **`stock_adjusted_return_rate(current: float, previous: float, factor: float = 1, dividend_yeld: float = 0, tax: float = 2) -> float | None`**
+    *   Calculates return rate considering a price adjustment `factor` (e.g., for splits/inplits), `dividend_yeld` (paid during the period), and an optional `tax` on dividends (defaulting to 2, implying 0% tax if not specified differently, as `1 - tax` is used).
+    *   Formula: `(current * factor) / (previous - (dividend_yeld * abs(1 - tax))) - 1`
+    *   Returns `None` if `previous` is `None`.
+*   **`stock_adjusted_price(adjusted: float, adjusted_return_rate: float) -> float`**
+    *   Calculates the theoretical previous price given the current adjusted price and the adjusted return rate between the two points.
+    *   Formula: `adjusted / (1 + adjusted_return_rate)`
+*   **`stock_adjusted_return_rate_check(current: float, previous_adjusted: float) -> float`**
+    *   Calculates the return rate between the current price and a previously adjusted price. Useful for verifying adjustments.
+    *   Formula: `current / previous_adjusted - 1`
+*   **`stock_event_factor(expression: str) -> tuple[str | None, float]`**
+    *   Parses a stock event string (like "10:1" for split or "1:10" for inplit/reverse split) to determine the event type and the numerical factor to apply to historical prices.
+    *   Arguments:
+        *   `expression` (str): Event string, e.g., "10:1" (split 1-to-10) or "1:10" (inplit 10-to-1).
+    *   Returns:
+        *   `tuple`: ('SPLIT' or 'INPLIT', factor). Factor is > 1 for SPLIT, < 1 for INPLIT. Returns `(None, 1)` if expression is empty or `None`.
+    *   Raises: `ValueError` if the expression format is invalid.
+
+### Investment Analysis
+
+*   **`get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataFrame`**
+    *   Calculates investment allocation metrics based on minimizing negative profit/loss impact (anti-Warren Buffett strategy). It assigns higher weights to assets with smaller losses (or larger gains) relative to the worst performer.
+    *   Arguments:
+        *   `df` (pd.DataFrame): DataFrame with columns 'Ticker', 'Price', 'Quantity', 'Average Price'.
+        *   `investment_amount` (float): The total amount to be invested/allocated across the assets in the DataFrame.
+    *   Returns:
+        *   `pd.DataFrame`: The input DataFrame with added columns:
+            *   `Profit/Loss`: `(Price - Average Price) * Quantity`
+            *   `Adjusted Profit/Loss`: `Profit/Loss` shifted so the minimum is 0.
+            *   `Weight`: `1 / (Adjusted Profit/Loss + 0.01)` (Inverse weight, higher for better performers).
+            *   `Proportion`: Normalized `Weight` (sums to 1).
+            *   `Investment Value`: `Proportion * investment_amount`.
+            *   `Quantity to Buy`: `Investment Value / Price`.
+    *   Raises: `ValueError` if required columns are missing.
+
+### Utility Functions
+
+*   **`random_header() -> dict`**
+    *   Returns a randomly chosen dictionary containing common browser headers (User-Agent, Accept, etc.). Useful for web scraping to mimic different browsers.
+*   **`is_valid_db_connection(conn) -> bool`**
+    *   Checks if the provided object `conn` appears to be a valid database connection (duck typing by checking for a callable `execute` method).
+*   **`numberize = lambda x: float(x.replace(",", ""))`**
+    *   A lambda function to convert a string containing a number (potentially with commas as thousands separators) into a float.
+*   **`first_or_none = lambda x: None if len(x) == 0 else x[0]`**
+    *   A lambda function to safely get the first element of a sequence `x`, returning `None` if the sequence is empty.
 
 ## Modules
 
@@ -363,5 +431,10 @@ print(f"The annual rate for a daily rate of {daily_rate} is: {annual_rate}")
             *   **Note:** This function performs extensive web scraping and relies heavily on the current structure of the Investidor10 and fiis.com.br websites. Changes to these sites may break the function. It uses an in-memory SQLite database to join the data scraped from different sources.
 
 
-# Finance Utilities, Calculations and Data Providers
----
+## Contributing
+
+Contributions are welcome! Please feel free to submit a pull request or open an issue.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
