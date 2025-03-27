@@ -26,4 +26,4 @@ dev = [
 ]
 
 [tool.uv.sources]
-fbpyutils = { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.0-py3-none-any.whl" }
+fbpyutils = { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl" }

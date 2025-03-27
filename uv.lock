@@ -151,18 +151,17 @@ wheels = [
 
 [[package]]
 name = "fbpyutils"
-version = "1.6.0"
-source = { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.0-py3-none-any.whl" }
+version = "1.6.1"
+source = { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl" }
 dependencies = [
     { name = "ofxparse" },
     { name = "openpyxl" },
     { name = "pandas" },
-    { name = "python-magic-bin" },
     { name = "pytz" },
     { name = "xlrd" },
 ]
 wheels = [
-    { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.0-py3-none-any.whl", hash = "sha256:0e7200d77c185fbffb7aa6df0d69d50844b3a91af23c8fc73c5ac504ace6cc7d" },
+    { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl", hash = "sha256:2d130f51e9419c4b90d479266c322218f5560ca30fdd067990012a487486272f" },
 ]
 
 [package.metadata]
@@ -170,10 +169,12 @@ requires-dist = [
     { name = "ofxparse", specifier = ">=0.21,<0.22" },
     { name = "openpyxl", specifier = ">=3.1.5,<4.0.0" },
     { name = "pandas", specifier = "==2.2.2" },
-    { name = "python-magic-bin", specifier = ">=0.4.14" },
+    { name = "python-magic", marker = "extra == 'unix'", specifier = ">=0.4.27" },
+    { name = "python-magic-bin", marker = "extra == 'windows'", specifier = ">=0.4.14" },
     { name = "pytz", specifier = ">=2024.1,<2025.0" },
     { name = "xlrd", specifier = ">=2.0.1,<3.0.0" },
 ]
+provides-extras = ["unix", "windows"]
 
 [[package]]
 name = "fbpyutils-finance"
@@ -196,7 +197,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fbpyutils", url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.0-py3-none-any.whl" },
+    { name = "fbpyutils", url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "yfinance", specifier = ">=0.2.54" },
@@ -498,16 +499,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/66/c0/0c8b6ad9f17a802ee498c46e004a0eb49bc148f2fd230864601a86dcf6db/python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3", size = 342432 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427", size = 229892 },
-]
-
-[[package]]
-name = "python-magic-bin"
-version = "0.4.14"
-source = { registry = "https://pypi.org/simple" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/2c/bbe8ad26591745da2c4692ea571145fb027c8ee1a0540407aa327684c4ce/python_magic_bin-0.4.14-py2.py3-none-macosx_10_6_intel.whl", hash = "sha256:7b1743b3dbf16601d6eedf4e7c2c9a637901b0faaf24ad4df4d4527e7d8f66a4", size = 334318 },
-    { url = "https://files.pythonhosted.org/packages/5a/5d/10b9ac745d9fd2f7151a2ab901e6bb6983dbd70e87c71111f54859d1ca2e/python_magic_bin-0.4.14-py2.py3-none-win32.whl", hash = "sha256:34a788c03adde7608028203e2dbb208f1f62225ad91518787ae26d603ae68892", size = 397784 },
-    { url = "https://files.pythonhosted.org/packages/07/c2/094e3d62b906d952537196603a23aec4bcd7c6126bf80eb14e6f9f4be3a2/python_magic_bin-0.4.14-py2.py3-none-win_amd64.whl", hash = "sha256:90be6206ad31071a36065a2fc169c5afb5e0355cbe6030e87641c6c62edc2b69", size = 409299 },
 ]
 
 [[package]]
