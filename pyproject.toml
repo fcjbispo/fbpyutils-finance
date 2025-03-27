@@ -13,6 +13,14 @@ dependencies = [
     "requests>=2.32.3",
 ]
 
+[project.optional-dependencies]
+windows = [
+    "python-magic-bin>=0.4.14",
+]
+unix = [
+    "python-magic>=0.4.27",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -23,6 +31,7 @@ dev = [
     "pytest>=8.3.5",
     "pytest-cov>=6.0.0",
     "pytest-mock>=3.14.0",
+    "freezegun>=1.5.1",
 ]
 
 [tool.uv.sources]
