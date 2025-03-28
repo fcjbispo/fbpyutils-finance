@@ -207,8 +207,13 @@ def stock_adjusted_return_rate(
 
     dividend_yeld = dividend_yeld or 0
 
-    if tax is None or tax >= 0:
+    # Default tax to 2 only if it's None
+    if tax is None:
         tax = 2
+    # Ensure tax is treated as float for calculation
+    else:
+        tax = float(tax)
+
 
     dividend_yeld = (dividend_yeld * abs(1 - tax))
 
@@ -261,20 +266,34 @@ def stock_event_factor(expression: str) -> tuple:
 
     parts = expression.split(':')
 
-    if len(parts) > 1:
-        parts[0] = as_float(parts[0])
-        parts[1] = as_float(parts[1])
+    # Expect exactly two parts after splitting by ':'
+    if len(parts) == 2:
+        try:
+            part1 = as_float(parts[0])
+            part2 = as_float(parts[1])
+        except ValueError:
+             raise ValueError(f"Invalid numeric values in expression '{expression}'")
 
-        if parts[0] == 1.0:
-            factor = parts[0] / parts[1]
-        elif parts[1] == 1.0:
+        if part1 <= 0 or part2 <= 0:
+             raise ValueError(f"Ratios must be positive in expression '{expression}'")
+
+        if part1 == 1.0:
+            # INPLIT (e.g., 1:10)
+            factor = part1 / part2
+            event = 'INPLIT'
+        elif part2 == 1.0:
+            # SPLIT (e.g., 2:1)
+            factor = part1
             event = 'SPLIT'
-            factor = parts[0]
+        else:
+            # Invalid ratio format (neither part is 1.0)
+            raise ValueError(f"Invalid ratio format in expression '{expression}'. Must be 'X:1' or '1:Y'.")
 
         return event, factor
     else:
-        raise ValueError('Invalid expression {}'.format(expression))
-    
+        # Invalid format (not X:Y)
+        raise ValueError(f"Invalid expression format '{expression}'. Expected 'X:Y'.")
+
 
 def get_investment_table(df: DataFrame, investment_amount: float) -> DataFrame:
     """
