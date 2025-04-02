@@ -1,45 +1,32 @@
 import os
 import re
 import pandas as pd
-
-from datetime import datetime
-from multiprocessing import Pool
-
+from datetime import date, datetime # Added date
+# Removed unused import: Pool from multiprocessing
 import warnings
+from typing import List, Tuple, Optional, Any, Union, Callable # Added imports
 
 from fbpyutils import xlsx as XL, string as SU
 
 
 warnings.simplefilter("ignore")
 
-_str_to_date = lambda x: None if x in ['-'] else datetime.strptime(x, '%d/%m/%Y').date()
-
-_str_to_number = lambda x: None if x in ['-'] else float(str(x).replace('.','~').replace(',','.').replace('~',''))
-
-_str_to_integer = lambda x: int(_str_to_number(x))
-
-_tuple_as_str = lambda x: [[str(c).strip() for c in l] for l in x]
+# Lambdas for common data conversions in CEI files
+_str_to_date: Callable[[str], Optional[date]] = lambda x: None if x in ['-'] else datetime.strptime(x, '%d/%m/%Y').date()
+_str_to_number: Callable[[Any], Optional[float]] = lambda x: None if x in ['-'] else float(str(x).replace('.','~').replace(',','.').replace('~',''))
+_str_to_integer: Callable[[Any], Optional[int]] = lambda x: int(val) if (val := _str_to_number(x)) is not None else None
+_tuple_as_str: Callable[[Tuple[Tuple[Any, ...], ...]], List[List[str]]] = lambda x: [[str(c).strip() for c in l] for l in x]
 
 
-def _deal_double_spaces(x):
+def _deal_double_spaces(x: Any) -> str:
     """
-    Replaces consecutive double spaces in a string with a single space.
-     Args:
-        x (str): The string to be processed.
-     Returns:
-        str: The processed string with consecutive double spaces replaced by a single space.
-     Overview:
-        This function takes a string as input and replaces any consecutive double spaces with a single space.
-        It first converts the input to a string if it's not already a string.
-        Then, it initializes variables `ss` and `s` as the consecutive double spaces and a single space, respectively.
-        The function enters a loop and checks if `ss` (consecutive double spaces) exists in the string `x`.
-        If it does, it replaces `ss` with `s` (single space) in `x`.
-        The loop continues until there are no more consecutive double spaces in `x`.
-        Finally, the function returns the processed string with consecutive double spaces replaced by a single space.
-     Example usage:
-        input_str = "Hello  world! This   is a test."
-        processed_str = _deal_double_spaces(input_str)
-        # processed_str will be "Hello world! This is a test."
+    Replaces consecutive double spaces in a string with single spaces.
+
+    Args:
+        x (Any): The input value (will be converted to string).
+
+    Returns:
+        str: The string with consecutive spaces collapsed.
     """
     x, ss, s = str(x), '  ', ' ' 
 
@@ -49,19 +36,21 @@ def _deal_double_spaces(x):
     return x
 
 
-def _extract_file_info(schema_file):
+def _extract_file_info(schema_file: str) -> Tuple[str, date]:
     """
-    Extracts information from a CEI file name, including the type of file and the date it was created.
+    Extracts the report type and reference date from a CEI Excel filename.
+
+    Assumes filename format like 'movimentacao-YYYY-MM-DD.xlsx' or
+    'posicao-YYYY-MM-DD-HH-MM-SS.xlsx'.
 
     Args:
-        schema_file (str): The path to the schema file to be processed.
+        schema_file (str): The full path to the CEI Excel file.
 
     Returns:
-        Tuple[str, datetime]: A tuple containing the CEI file type (as a string)
-        and the date the file was created (as a datetime object).
+        Tuple[str, date]: A tuple containing (report_type, reference_date).
 
     Raises:
-        ValueError: If the file name is invalid.
+        ValueError: If the filename format is not recognized or the date is invalid.
     """
     cei_file_name = schema_file.split(os.path.sep)[-1].split('.')[0]
 
@@ -85,26 +74,18 @@ def _extract_file_info(schema_file):
         raise ValueError(f'Nome de arquivo invalido: {cei_file_name}')
 
 
-def _extract_product_id(product, sep='-'):
+def _extract_product_id(product: str, sep: str = '-') -> str:
     """
-    Extracts the product ID from a given product string.
-     Args:
-        product (str): The product string from which to extract the ID.
-        sep (str, optional): The separator used to split the product string. Default is '-'.
-     Returns:
-        str: The extracted product ID.
-     Overview:
-        This function extracts the product ID from the given product string.
-        If the word 'Tesouro' is found in the product string, the entire product string is returned as the ID.
-        Otherwise, the product string is split using the specified separator.
-        The extracted ID is determined based on the contents of the split product string.
-        If the word 'Futuro' is found in the first part of the split string, the second part is considered as the ID.
-        Otherwise, the first part is considered as the ID.
-        The extracted ID is returned after stripping any leading or trailing spaces.
-     Example usage:
-        product_string = 'Futuro-12345'
-        extracted_id = _extract_product_id(product_string)
-        # extracted_id will be '12345'
+    Extracts a simplified product identifier from the CEI product description string.
+
+    Handles cases like 'Tesouro ...', 'Some Stock - XYZW3', 'Futuro - ABCZ9'.
+
+    Args:
+        product (str): The product description string from the CEI file.
+        sep (str, optional): The separator used between the description and the code. Defaults to '-'.
+
+    Returns:
+        str: The extracted product identifier (e.g., 'Tesouro ...', 'XYZW3', 'ABCZ9').
     """
     if 'Tesouro' in product:
         return product
@@ -116,7 +97,21 @@ def _extract_product_id(product, sep='-'):
     ].strip()
 
 
-def process_schema_movimentacao(input_files):
+def process_schema_movimentacao(input_files: List[str]) -> Optional[pd.DataFrame]:
+    """
+    Processes CEI 'Movimentação' (Transaction) Excel files.
+
+    Reads one or more 'movimentacao-*.xlsx' files, extracts data, standardizes columns,
+    performs type conversions, and concatenates them into a single DataFrame.
+
+    Args:
+        input_files (List[str]): A list of paths to the 'Movimentação' Excel files.
+
+    Returns:
+        Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
+                                transaction data, or None if no files are processed or
+                                if an error occurs.
+    """
     xl_dataframes = []
     fields = [
         'entrada_saida',
@@ -165,7 +160,21 @@ def process_schema_movimentacao(input_files):
     return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
-def process_schema_eventos_provisionados(input_files):
+def process_schema_eventos_provisionados(input_files: List[str]) -> Optional[pd.DataFrame]:
+    """
+    Processes CEI 'Eventos Provisionados' (Provisioned Events) Excel files.
+
+    Reads one or more 'eventos-*.xlsx' files, extracts data, standardizes columns,
+    performs type conversions, filters out totals, and concatenates them into a single DataFrame.
+
+    Args:
+        input_files (List[str]): A list of paths to the 'Eventos Provisionados' Excel files.
+
+    Returns:
+        Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
+                                provisioned events data, or None if no files are processed
+                                or if an error occurs.
+    """
     xl_dataframes = []
     fields = [
         'codigo_produto',
@@ -216,7 +225,21 @@ def process_schema_eventos_provisionados(input_files):
     return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
-def process_schema_negociacao(input_files):
+def process_schema_negociacao(input_files: List[str]) -> Optional[pd.DataFrame]:
+    """
+    Processes CEI 'Negociação de Ativos' (Asset Trading) Excel files.
+
+    Reads one or more 'negociacao-*.xlsx' files, extracts data, standardizes columns,
+    performs type conversions, and concatenates them into a single DataFrame.
+
+    Args:
+        input_files (List[str]): A list of paths to the 'Negociação' Excel files.
+
+    Returns:
+        Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
+                                trading data, or None if no files are processed or
+                                if an error occurs.
+    """
     xl_dataframes = []
     fields = [
         'data_negocio',
@@ -265,7 +288,21 @@ def process_schema_negociacao(input_files):
     return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
-def process_schema_posicao_acoes(input_files):
+def process_schema_posicao_acoes(input_files: List[str]) -> Optional[pd.DataFrame]:
+    """
+    Processes CEI 'Posição' (Position) Excel files, specifically the 'Ações'/'Acoes' and 'BDR' sheets.
+
+    Reads one or more 'posicao-*.xlsx' files, extracts data from relevant sheets,
+    standardizes columns, performs type conversions, and concatenates them into a single DataFrame.
+
+    Args:
+        input_files (List[str]): A list of paths to the 'Posição' Excel files.
+
+    Returns:
+        Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
+                                stock and BDR position data, or None if no relevant sheets
+                                are found or if an error occurs.
+    """
     xl_dataframes = []
     fields = [
         'codigo_produto',
@@ -328,7 +365,21 @@ def process_schema_posicao_acoes(input_files):
     return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
-def process_schema_posicao_emprestimo_ativos(input_files):
+def process_schema_posicao_emprestimo_ativos(input_files: List[str]) -> Optional[pd.DataFrame]:
+    """
+    Processes CEI 'Posição' (Position) Excel files, specifically the 'Empréstimo de Ativos'/'Empréstimos' sheets.
+
+    Reads one or more 'posicao-*.xlsx' files, extracts data from relevant sheets,
+    standardizes columns, performs type conversions, and concatenates them into a single DataFrame.
+
+    Args:
+        input_files (List[str]): A list of paths to the 'Posição' Excel files.
+
+    Returns:
+        Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
+                                asset lending position data, or None if no relevant sheets
+                                are found or if an error occurs.
+    """
     xl_dataframes = []
     fields = [
         'codigo_produto',
@@ -399,7 +450,21 @@ def process_schema_posicao_emprestimo_ativos(input_files):
     return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
-def process_schema_posicao_etf(input_files):
+def process_schema_posicao_etf(input_files: List[str]) -> Optional[pd.DataFrame]:
+    """
+    Processes CEI 'Posição' (Position) Excel files, specifically the 'ETF' sheet.
+
+    Reads one or more 'posicao-*.xlsx' files, extracts data from the 'ETF' sheet,
+    standardizes columns, performs type conversions, and concatenates them into a single DataFrame.
+
+    Args:
+        input_files (List[str]): A list of paths to the 'Posição' Excel files.
+
+    Returns:
+        Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
+                                ETF position data, or None if the 'ETF' sheet is not found
+                                or if an error occurs.
+    """
     xl_dataframes = []
     fields = [
         'codigo_produto',
@@ -459,7 +524,21 @@ def process_schema_posicao_etf(input_files):
     return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
-def process_schema_posicao_fundos_investimento(input_files):
+def process_schema_posicao_fundos_investimento(input_files: List[str]) -> Optional[pd.DataFrame]:
+    """
+    Processes CEI 'Posição' (Position) Excel files, specifically the 'Fundo de Investimento' sheet.
+
+    Reads one or more 'posicao-*.xlsx' files, extracts data from the 'Fundo de Investimento' sheet,
+    standardizes columns, performs type conversions, and concatenates them into a single DataFrame.
+
+    Args:
+        input_files (List[str]): A list of paths to the 'Posição' Excel files.
+
+    Returns:
+        Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
+                                investment fund position data, or None if the sheet is not found
+                                or if an error occurs.
+    """
     xl_dataframes = []
     fields = [
         'codigo_produto',
@@ -521,7 +600,21 @@ def process_schema_posicao_fundos_investimento(input_files):
     return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
-def process_schema_posicao_tesouro_direto(input_files):
+def process_schema_posicao_tesouro_direto(input_files: List[str]) -> Optional[pd.DataFrame]:
+    """
+    Processes CEI 'Posição' (Position) Excel files, specifically the 'Tesouro Direto' sheet.
+
+    Reads one or more 'posicao-*.xlsx' files, extracts data from the 'Tesouro Direto' sheet,
+    standardizes columns, performs type conversions, and concatenates them into a single DataFrame.
+
+    Args:
+        input_files (List[str]): A list of paths to the 'Posição' Excel files.
+
+    Returns:
+        Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
+                                Tesouro Direto position data, or None if the sheet is not found
+                                or if an error occurs.
+    """
     xl_dataframes = []
     fields = [
         'codigo_produto',
@@ -587,7 +680,21 @@ def process_schema_posicao_tesouro_direto(input_files):
     return pd.concat(xl_dataframes) if xl_dataframes else None
 
 
-def process_schema_posicao_renda_fixa(input_files):
+def process_schema_posicao_renda_fixa(input_files: List[str]) -> Optional[pd.DataFrame]:
+    """
+    Processes CEI 'Posição' (Position) Excel files, specifically the 'Renda Fixa' sheet.
+
+    Reads one or more 'posicao-*.xlsx' files, extracts data from the 'Renda Fixa' sheet,
+    standardizes columns, performs type conversions, and concatenates them into a single DataFrame.
+
+    Args:
+        input_files (List[str]): A list of paths to the 'Posição' Excel files.
+
+    Returns:
+        Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
+                                fixed income position data, or None if the sheet is not found
+                                or if an error occurs.
+    """
     xl_dataframes = []
     fields = [
         'codigo_produto',

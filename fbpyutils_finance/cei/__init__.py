@@ -1,16 +1,14 @@
 import os
-import re
-import sqlite3
+# Removed unused imports: re, sqlite3, datetime from datetime, XL from fbpyutils
+import os
 import pandas as pd
-
-from datetime import datetime
 from multiprocessing import Pool
-
 import warnings
+from typing import List, Tuple, Callable, Any, Optional # Added imports
 
-from fbpyutils import file as FU, xlsx as XL
+from fbpyutils import file as FU
 
-from fbpyutils.finance.cei.schemas import \
+from fbpyutils_finance.cei.schemas import \
     process_schema_movimentacao, process_schema_eventos_provisionados, process_schema_negociacao, \
     process_schema_posicao_acoes, process_schema_posicao_emprestimo_ativos, process_schema_posicao_etf, \
     process_schema_posicao_fundos_investimento, process_schema_posicao_tesouro_direto, \
@@ -31,29 +29,26 @@ _OPERATIONS = (
 )
 
 
-def _process_operation(operation):
+def _process_operation(operation: Tuple[str, str, str, Callable]) -> Tuple[str, int, Optional[pd.DataFrame]]:
     """
-    Process the specified operation.
-     Args:
-        operation (tuple): A tuple containing the details of the operation to be processed.
+    Processes a single CEI data operation type.
+
+    Finds files matching a pattern, applies a specific processing function (schema processor),
+    and returns the results.
+
+    Args:
+        operation (Tuple[str, str, str, Callable]): A tuple containing:
+            - op_name (str): The name of the operation (e.g., 'movimentacao').
+            - input_folder (str): The folder containing the CEI Excel files.
+            - input_mask (str): The file pattern to search for (e.g., 'movimentacao-*.xlsx').
+            - processor (Callable): The function responsible for processing the found files
+                                     (expected to return a DataFrame or None).
+
+    Returns:
+        Tuple[str, int, Optional[pd.DataFrame]]: A tuple containing:
             - op_name (str): The name of the operation.
-            - input_folder (str): The path to the folder containing the input files.
-            - input_mask (str): The mask or pattern for finding input files.
-            - processor (function): The function to be applied to the input files.
-     Returns:
-        tuple: A tuple containing the result of the operation.
-            - op_name (str): The name of the operation.
-            - num_files (int): The number of input files processed.
-            - data (any): The processed data.
-     Overview:
-        This function processes the specified operation by performing the following steps:
-        1. Extract the operation details from the input tuple.
-        2. Use the `FU.find` function to find input files in the specified input folder using the input mask.
-        3. Apply the specified `processor` function to the input files to obtain the processed data.
-        4. Return a tuple containing the operation name, the number of input files processed, and the processed data.
-     Example usage:
-        operation = ('op_name', '/path/to/input_folder', '*.txt', process_function)
-        result = _process_operation(operation)
+            - rows (int): The number of rows in the processed DataFrame (0 if None).
+            - data (Optional[pd.DataFrame]): The processed data as a DataFrame, or None if processing fails or yields no data.
     """
     op_name, input_folder, input_mask, processor = operation
     input_files = FU.find(input_folder, input_mask)
@@ -64,28 +59,25 @@ def _process_operation(operation):
     return (op_name, rows, data)
 
 
-def get_cei_data(input_folder, parallelize=True):
+def get_cei_data(input_folder: str, parallelize: bool = True) -> List[Tuple[str, int, Optional[pd.DataFrame]]]:
     """
-    Retrieves CEI data from the specified input folder and processes it based on the specified operations.
-     Args:
-        input_folder (str): The path to the folder containing the CEI data.
-        parallelize (bool, optional): Flag indicating whether to parallelize the data processing. Defaults to True.
-     Returns:
-        list: A list containing the processed data.
-            Each item in the list represents the result of processing an operation and consists of:
-            - operation (str): The name of the operation performed.
-            - data (any): The processed data.
-     Overview:
-        This function retrieves CEI data from the specified input folder and processes it based on the operations defined in `_OPERATIONS`.
-        The `parallelize` parameter controls whether the data processing is parallelized.
-        The function first checks if parallelization is enabled by comparing the value of `parallelize` with the number of available CPUs.
-        It then initializes an empty list to store the results of the data processing.
-        If parallelization is enabled, the function uses a multiprocessing pool to concurrently process the data using the `_process_operation` function.
-        Otherwise, it sequentially processes the data by iterating over the operations and calling `_process_operation` for each operation.
-        The results of the data processing are appended to the data list.
-        Finally, the function returns the list containing the processed data.
-     Example usage:
-        data = _get_cei_data_pre(input_folder='/path/to/cei_data', parallelize=True)
+    Retrieves and processes various types of CEI data from Excel files in a specified folder.
+
+    It iterates through predefined operations (_OPERATIONS), finds corresponding
+    Excel files (e.g., 'movimentacao-*.xlsx'), and uses specific schema processors
+    to parse and consolidate the data into DataFrames. Processing can be parallelized.
+
+    Args:
+        input_folder (str): The path to the directory containing the CEI Excel files.
+        parallelize (bool, optional): If True, uses multiprocessing to process
+                                      different operation types in parallel. Defaults to True.
+
+    Returns:
+        List[Tuple[str, int, Optional[pd.DataFrame]]]: A list of tuples, where each tuple
+            represents the result of one operation type, containing:
+            - op_name (str): The name of the operation (e.g., 'movimentacao').
+            - rows (int): The number of rows in the processed DataFrame (0 if None).
+            - data (Optional[pd.DataFrame]): The processed data as a DataFrame, or None.
     """
     PARALLELIZE = parallelize and os.cpu_count()>1
     operations = []

@@ -161,7 +161,7 @@ dependencies = [
     { name = "xlrd" },
 ]
 wheels = [
-    { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl", hash = "sha256:2d130f51e9419c4b90d479266c322218f5560ca30fdd067990012a487486272f" },
+    { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl", hash = "sha256:c445af7eaf626ac0dc41d8197d5b71bb3b072701161e311dd527f0b670548fac" },
 ]
 
 [package.metadata]
@@ -181,9 +181,11 @@ name = "fbpyutils-finance"
 version = "1.4.0"
 source = { editable = "." }
 dependencies = [
+    { name = "beautifulsoup4" },
     { name = "fbpyutils" },
     { name = "pandas" },
     { name = "pytest-mock" },
+    { name = "python-dateutil" },
     { name = "requests" },
     { name = "yfinance" },
 ]
@@ -207,9 +209,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "beautifulsoup4", specifier = ">=4.13.3" },
     { name = "fbpyutils", url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
+    { name = "python-dateutil", specifier = ">=2.9.0.post0" },
     { name = "python-magic", marker = "extra == 'unix'", specifier = ">=0.4.27" },
     { name = "python-magic-bin", marker = "extra == 'windows'", specifier = ">=0.4.14" },
     { name = "requests", specifier = ">=2.32.3" },

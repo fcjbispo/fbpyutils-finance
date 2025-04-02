@@ -1,11 +1,11 @@
 from fbpyutils import debug
 
-from typing import Dict
-import requests 
+from typing import Dict, Optional
+import requests
 import datetime
 from bs4 import BeautifulSoup
 
-from fbpyutils_finance import MARKET_INFO, first_or_none, numberize
+from fbpyutils_finance import numberize # Removed unused MARKET_INFO, first_or_none
 
 
 # -
@@ -53,20 +53,28 @@ def _bingsearch(x: str) -> requests.models.Response:
     r = s.get(url, headers=h)
 
     return r
-    return r
 
 
 def stock_price(
-    x: str, market: str=None
+    x: str, market: Optional[str] = None
 ) -> Dict:
-    '''
-        Performs a Bing search for the current price of the supplied ticker in the default market.
-        Parameters:
-            x (str): The ticker to search for the current price.
-            market (str, Optional): The name of the market on which the ticker will be searched.
-        Returns:
-            dict: A standard dictionary with the stock price and information for the supplied ticker.
-    '''
+    """
+    Performs a Bing search for the current price of the supplied ticker.
+
+    Args:
+        x (str): The ticker symbol to search for.
+        market (Optional[str], optional): The market exchange symbol (e.g., 'BVMF', 'NASDAQ').
+                                          If provided, it's used to refine the search. Defaults to None.
+
+    Returns:
+        Dict: A dictionary containing the stock price information or an error message.
+              On success: {'info': 'STOCK PRICE', 'source': 'BING', 'status': 'SUCCESS',
+                           'details': {'market': str, 'ticker': str, 'name': str, 'currency': str,
+                                       'price': float, 'variation': None, 'variation_percent': None,
+                                       'trend': None, 'position_time': datetime}}
+              On error: {'info': 'STOCK PRICE', 'source': 'BING', 'status': 'ERROR',
+                         'details': {'error_message': str}}
+    """
     result = {
         'info': 'STOCK PRICE',
         'source': 'BING',
@@ -170,6 +178,4 @@ def stock_price(
     
     return result
 
-stock_price('XYLD')
-
-
+# Example usage removed: stock_price('XYLD')
