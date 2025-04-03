@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Tuple, Any
 
 # Import necessary components from the project structure
-import fbpyutils.finance as FI
+import fbpyutils_finance as FI
 import fbpyutils.file as FU
 from fbpyutils.debug import debug_info
 
@@ -54,7 +54,7 @@ class CVM:
         Raises:
             OSError: If the folder cannot be created.
         """
-        # Use FI.USER_APP_FOLDER defined in fbpyutils.finance
+        # Use FI.USER_APP_FOLDER defined in fbpyutils_finance
         history_folder = history_folder or os.path.join(FI.USER_APP_FOLDER, 'history')
         if not os.path.exists(history_folder):
             try:

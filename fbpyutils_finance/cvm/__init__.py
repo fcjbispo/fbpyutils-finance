@@ -11,7 +11,7 @@ Main entry point is the CVM class.
 import os
 import pandas as pd
 # Import base finance package for constants like APP_FOLDER, USER_APP_FOLDER
-import fbpyutils.finance as FI
+import fbpyutils_finance as FI
 
 # --- Configuration / Constants ---
 
@@ -31,7 +31,7 @@ TARGET_ENCODING = 'utf-8'     # Target encoding for processing and storage
 # It's crucial these files exist and are correctly maintained.
 
 # Path to the Excel file containing the consolidated header definitions across different CVM file versions/layouts.
-# Uses FI.APP_FOLDER which should be defined in fbpyutils.finance package
+# Uses FI.APP_FOLDER which should be defined in fbpyutils_finance package
 HEADERS_FILE = os.path.join(FI.APP_FOLDER, 'cvm', 'data', 'if_headers_v4.xlsx')
 # Path to the Excel file containing the base mapping templates (used to generate HEADERS_FILE).
 HEADER_MAPPINGS_FILE = os.path.join(FI.APP_FOLDER, 'cvm', 'data', 'if_header_mappings.xlsx')
