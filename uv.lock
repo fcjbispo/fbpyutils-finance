@@ -178,7 +178,7 @@ provides-extras = ["unix", "windows"]
 
 [[package]]
 name = "fbpyutils-finance"
-version = "1.4.0rc0"
+version = "1.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
