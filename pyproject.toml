@@ -1,6 +1,6 @@
 [project]
 name = "fbpyutils-finance"
-version = "1.4.0rc0"
+version = "1.4.0rc1"
 description = "Francisco Bispo's utilities for Financial Operations"
 authors = [
     { name = "Francisco C J Bispo", email = "fcjbispo@gmail.com" }
