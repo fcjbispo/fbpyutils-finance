@@ -18,7 +18,6 @@ sys.path.insert(0, '..')
 # +
 from fbpyutils import debug
 
-from fbpyutils.datetime import apply_timezone
 
 from typing import Dict
 import requests 
@@ -83,7 +82,10 @@ class YahooCurrencyDataProvider():
         
 
     def __init__(self, params):
-        super().__init__(params)
+        if not self._check_params(params):
+            # Raise an error if params are invalid during initialization
+            raise ValueError("Invalid parameters provided for YahooCurrencyDataProvider.")
+        self.params = params # Store params as instance attribute
 
     def get_data(self) -> pd.DataFrame:
         currency_from = self.params['currency_from']
@@ -118,12 +120,30 @@ class YahooStockDataProvider():
     """
 
     def _check_params(self, params) -> bool:
-        return all(
-            [p in params for p in ('ticker', 'market', 'start', 'end')]
-        ) and params['end'] > params['start'] and params['market'].upper() in ('BR', 'US')
+        # Check required keys exist
+        if not all(p in params for p in ('ticker', 'market', 'start', 'end')):
+            return False
+        # Check market validity
+        if params['market'].upper() not in ('BR', 'US'):
+            return False
+        # Check date order only if both dates are provided
+        if params['start'] is not None and params['end'] is not None:
+            # Attempt conversion for comparison if they are strings
+            try:
+                start_dt = pd.to_datetime(params['start'])
+                end_dt = pd.to_datetime(params['end'])
+                if end_dt <= start_dt:
+                    return False
+            except (ValueError, TypeError):
+                # Handle cases where conversion fails or types are incompatible
+                return False # Consider invalid if dates cannot be compared
+        return True
 
     def __init__(self, params):
-        super().__init__(params)
+        if not self._check_params(params):
+            # Raise an error if params are invalid during initialization
+            raise ValueError("Invalid parameters provided for YahooStockDataProvider.")
+        self.params = params # Store params as instance attribute
 
     def get_data(self) -> pd.DataFrame:
         ticker = self.params['ticker']
@@ -139,11 +159,24 @@ class YahooStockDataProvider():
         if self.params.get('payments', False):
             xdata = yf.Ticker(ticker).dividends
             # Apply filters to dividends
-            if start is not None and end is not None:
-                filtered_dividends = xdata.loc[(xdata.index >= start) & (xdata.index <= end)]
-            elif start is not None:
-                filtered_dividends = xdata.loc[xdata.index >= start]
-            else:
+            # Convert start/end to datetime objects for reliable comparison
+            start_dt = pd.to_datetime(start) if start is not None else None
+            end_dt = pd.to_datetime(end) if end is not None else None
+
+            if start_dt is not None and end_dt is not None:
+                # Ensure index is also datetime before comparison
+                if not isinstance(xdata.index, pd.DatetimeIndex):
+                     xdata.index = pd.to_datetime(xdata.index)
+                filtered_dividends = xdata.loc[(xdata.index >= start_dt) & (xdata.index <= end_dt)]
+            elif start_dt is not None:
+                if not isinstance(xdata.index, pd.DatetimeIndex):
+                     xdata.index = pd.to_datetime(xdata.index)
+                filtered_dividends = xdata.loc[xdata.index >= start_dt]
+            elif end_dt is not None: # Handle case where only end_dt is provided
+                if not isinstance(xdata.index, pd.DatetimeIndex):
+                     xdata.index = pd.to_datetime(xdata.index)
+                filtered_dividends = xdata.loc[xdata.index <= end_dt]
+            else: # Both are None
                 filtered_dividends = xdata
             # Check if the resulting series has more than one row
             if isinstance(filtered_dividends, pd.Series):
@@ -262,4 +295,3 @@ def stock_price(
         }
     
     return result
-
