@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from fbpyutils_finance.bovespa import StockHistory
+from fbpyutils_finance.bovespa import StockHistory, FetchModes
 
 def test_validate_period_date_valid():
     # Test valid formats
