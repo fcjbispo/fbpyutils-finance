@@ -152,7 +152,7 @@ wheels = [
 [[package]]
 name = "fbpyutils"
 version = "1.6.1"
-source = { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl" }
+source = { url = "https://github.com/fcjbispo/builds/blob/d64fc42fd39bfab3189148a81b590ea624f29d01/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl?raw=true" }
 dependencies = [
     { name = "ofxparse" },
     { name = "openpyxl" },
@@ -161,7 +161,7 @@ dependencies = [
     { name = "xlrd" },
 ]
 wheels = [
-    { url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl", hash = "sha256:c445af7eaf626ac0dc41d8197d5b71bb3b072701161e311dd527f0b670548fac" },
+    { url = "https://github.com/fcjbispo/builds/blob/d64fc42fd39bfab3189148a81b590ea624f29d01/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl?raw=true", hash = "sha256:c445af7eaf626ac0dc41d8197d5b71bb3b072701161e311dd527f0b670548fac" },
 ]
 
 [package.metadata]
@@ -212,7 +212,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.13.3" },
-    { name = "fbpyutils", url = "https://github.com/fcjbispo/builds/raw/main/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl" },
+    { name = "fbpyutils", url = "https://github.com/fcjbispo/builds/blob/d64fc42fd39bfab3189148a81b590ea624f29d01/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl?raw=true" },
     { name = "lxml", specifier = ">=5.3.1" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
