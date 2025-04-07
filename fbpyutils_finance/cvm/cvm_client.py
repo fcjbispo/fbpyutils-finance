@@ -528,7 +528,7 @@ class CVM:
         return read_cvm_history_file(
             source_file=cvm_file_path,
             headers_df=self.HEADERS_DF,
-            apply_converters=True, # Typically want converted data
+            apply_conversions=True, # Typically want converted data
             check_header=check_header
         )
 

@@ -88,7 +88,7 @@ def write_target_file(data: str, metadata: Dict[str, Any], target_folder: str, i
 def read_cvm_history_file(
     source_file: str,
     headers_df: pd.DataFrame,
-    apply_converters: bool = True,
+    apply_conversions: bool = True,
     check_header: bool = False
 ) -> Tuple[str, str, pd.DataFrame, List[str]]:
     """
@@ -97,7 +97,7 @@ def read_cvm_history_file(
     Args:
         source_file (str): Path to the CVM history file (CSV format, ';' delimited).
         headers_df (pd.DataFrame): DataFrame containing the header mappings (loaded from HEADERS_FILE).
-        apply_converters (bool, optional): Whether to apply data type conversions defined in mappings. Defaults to True.
+        apply_conversions (bool, optional): Whether to apply data type conversions defined in mappings. Defaults to True.
         check_header (bool, optional): Whether to verify if the file's header matches known mappings. Defaults to False.
 
     Returns:
@@ -116,7 +116,7 @@ def read_cvm_history_file(
     step = 'STARTING'
     try:
         if not os.path.exists(source_file):
-             raise FileNotFoundError(f"Source file not found: {source_file}")
+            raise FileNotFoundError(f"Source file not found: {source_file}")
 
         step = 'CHECK FILE HEADER'
         if check_header:
@@ -134,22 +134,21 @@ def read_cvm_history_file(
         step = 'FILTERING HEADER MAPPINGS'
         mappings = headers_df[headers_df['Hash'] == header_hash].to_dict('records')
         if not mappings:
-             raise ValueError(f"No header mappings found for hash {header_hash} in file {source_file}. Headers might have changed.")
+            raise ValueError(f"No header mappings found for hash {header_hash} in file {source_file}. Headers might have changed.")
 
         expressions, data_converters = get_expression_and_converters(mappings)
 
         if not expressions: # Mappings might exist but result in no expressions if all source fields are null
             raise ValueError(f'No expressions generated from mappings for hash {header_hash}. Check mappings for file {source_file}.')
-        if apply_converters and not data_converters:
-             raise ValueError(f'No converters found for hash {header_hash}, but apply_converters is True. Check mappings for file {source_file}.')
-
+        if apply_conversions and not data_converters:
+            raise ValueError(f'No converters found for hash {header_hash}, but apply_converters is True. Check mappings for file {source_file}.')
 
         step = 'READING DATA FROM SOURCE FILE'
         try:
             # Specify low_memory=False for potentially mixed type columns
             if_data = pd.read_csv(source_file, sep=';', encoding=TARGET_ENCODING, dtype=str, quoting=csv.QUOTE_NONE, low_memory=False, on_bad_lines='warn')
         except Exception as read_err:
-             raise ValueError(f"Failed to read CSV {source_file}: {read_err}")
+            raise ValueError(f"Failed to read CSV {source_file}: {read_err}")
 
         if if_data.empty:
             print(f"Warning: File {source_file} is empty.")
@@ -161,13 +160,12 @@ def read_cvm_history_file(
             empty_df = pd.DataFrame(columns=all_expected_cols)
             return kind, sub_kind, empty_df, partition_cols
 
-
         if_data.columns = [c.lower() for c in if_data.columns] # Normalize column names immediately
 
         step = 'APPLYING DATA EXPRESSIONS'
         cvm_if_data = apply_expressions(if_data, expressions=expressions)
 
-        if apply_converters:
+        if apply_conversions:
             step = 'APPLYING DATA TYPES CONVERSIONS'
             cvm_if_data = apply_converters(cvm_if_data.copy(), data_converters) # Use copy to avoid SettingWithCopyWarning
 
@@ -182,22 +180,22 @@ def read_cvm_history_file(
 
         # Safely access columns for period calculation
         if 'position_date' in cvm_if_data.columns and not cvm_if_data['position_date'].isnull().all():
-             try:
-                 # Ensure it's datetime before formatting
-                 pos_date_dt = pd.to_datetime(cvm_if_data['position_date'], errors='coerce')
-                 cvm_if_data['year'] = pos_date_dt.dt.strftime('%Y')
-                 cvm_if_data['period'] = pos_date_dt.dt.strftime('%Y-%m')
-                 partition_cols.extend(['year', 'period'])
-             except Exception as e:
-                 print(f"Warning: Could not compute period info from 'position_date' in {source_file}: {e}")
+            try:
+                # Ensure it's datetime before formatting
+                pos_date_dt = pd.to_datetime(cvm_if_data['position_date'], errors='coerce')
+                cvm_if_data['year'] = pos_date_dt.dt.strftime('%Y')
+                cvm_if_data['period'] = pos_date_dt.dt.strftime('%Y-%m')
+                partition_cols.extend(['year', 'period'])
+            except Exception as e:
+                print(f"Warning: Could not compute period info from 'position_date' in {source_file}: {e}")
         elif 'start_date' in cvm_if_data.columns and not cvm_if_data['start_date'].isnull().all():
-             try:
-                 start_date_dt = pd.to_datetime(cvm_if_data['start_date'], errors='coerce')
-                 cvm_if_data['year'] = start_date_dt.dt.strftime('%Y')
-                 cvm_if_data['period'] = start_date_dt.dt.strftime('%Y-%m')
-                 partition_cols.extend(['year', 'period'])
-             except Exception as e:
-                 print(f"Warning: Could not compute period info from 'start_date' in {source_file}: {e}")
+            try:
+                start_date_dt = pd.to_datetime(cvm_if_data['start_date'], errors='coerce')
+                cvm_if_data['year'] = start_date_dt.dt.strftime('%Y')
+                cvm_if_data['period'] = start_date_dt.dt.strftime('%Y-%m')
+                partition_cols.extend(['year', 'period'])
+            except Exception as e:
+                print(f"Warning: Could not compute period info from 'start_date' in {source_file}: {e}")
         elif sub_kind == 'CAD_FI': # Special handling for CAD_FI based on filename date
             try:
                 file_name = os.path.basename(source_file)
@@ -208,8 +206,8 @@ def read_cvm_history_file(
                     date_part_str = parts[1].split('_')[-1] # YYYYMMDD
                     date_format = '%Y%m%d'
                 elif len(parts) >= 2 and parts[1] == 'cad_fi': # Current file, use today's date
-                     date_part_str = datetime.now().strftime('%Y%m%d')
-                     date_format = '%Y%m%d'
+                    date_part_str = datetime.now().strftime('%Y%m%d')
+                    date_format = '%Y%m%d'
 
                 if date_part_str:
                     period_date = pd.to_datetime(date_part_str, format=date_format)
@@ -218,20 +216,18 @@ def read_cvm_history_file(
                     cvm_if_data['period_date'] = period_date.strftime('%Y-%m-%d')
                     partition_cols.extend(['year', 'period', 'period_date'])
                 else:
-                     print(f"Warning: Could not extract date from filename for CAD_FI: {file_name}")
+                    print(f"Warning: Could not extract date from filename for CAD_FI: {file_name}")
 
             except Exception as e:
                 print(f"Warning: Error computing period info for CAD_FI file {source_file}: {e}")
         # else: # No date column found for period calculation
         #     print(f"Warning: No suitable date column found for period calculation in {source_file}")
 
-
         # Ensure all potential partition columns exist before selecting
         final_cols = []
         for col in partition_cols + cvm_if_data_cols:
-             if col in cvm_if_data.columns and col not in final_cols:
-                 final_cols.append(col)
-
+            if col in cvm_if_data.columns and col not in final_cols:
+                final_cols.append(col)
 
         step = 'SELECTING DATA TO RETURN'
         return kind, sub_kind, cvm_if_data[final_cols], partition_cols

@@ -51,7 +51,7 @@ def test_read_cvm_history_file_success(tmp_path, headers_df, monkeypatch):
     headers_df.loc[0, 'Hash'] = 'dummyhash'
 
     # No need to wrap the function, the mock on processing_mod should suffice
-    kind, sub_kind, df, parts = file_io.read_cvm_history_file(str(csv_path), headers_df, apply_converters=True, check_header=True)
+    kind, sub_kind, df, parts = file_io.read_cvm_history_file(str(csv_path), headers_df, apply_conversions=True, check_header=True)
     assert kind == "KIND"
     assert sub_kind == "SUBKIND"
     assert isinstance(df, pd.DataFrame)

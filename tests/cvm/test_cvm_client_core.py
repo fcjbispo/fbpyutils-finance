@@ -77,19 +77,14 @@ def test_get_cvm_file_data_with_mock(headers_df, tmp_path, monkeypatch):
     monkeypatch.setattr(fio, "get_expression_and_converters", lambda mappings: (["\"header1\" AS header1"], {'header1': lambda x: x}))
     monkeypatch.setattr(pd, "read_csv", lambda *args, **kwargs: pd.DataFrame({'header1': ['1', '2'], 'header2': ['a', 'b']}))
 
-    # Update headers_df to include dummyhash
-    client.HEADERS_DF = pd.DataFrame([
-        {'Hash': 'dummyhash', 'Target_Field': 'header1', 'Source_Field': 'header1'}
-    ])
-
     # Patch get_expression_and_converters inside processing module
     import fbpyutils_finance.cvm.processing as processing_mod
     monkeypatch.setattr(processing_mod, "get_expression_and_converters", lambda mappings: (["\"header1\" AS header1"], {'header1': lambda x: x}))
 
-    import fbpyutils_finance.cvm.file_io as fio
-    # Mock the function where it's actually used in file_io
-    monkeypatch.setattr(file_io, "get_expression_and_converters",
-                     lambda mappings: (["\"header1\" AS header1"], {'header1': lambda x: x}))
+    # Update headers_df to include dummyhash
+    client.HEADERS_DF = pd.DataFrame(
+        [{"Hash": "dummyhash", "Target_Field": "header1", "Source_Field": "header1"}]
+    )
 
     # Get the result directly
     result = client.get_cvm_file_data(str(dummy_path))
