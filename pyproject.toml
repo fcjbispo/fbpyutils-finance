@@ -1,0 +1,43 @@
+[project]
+name = "fbpyutils-finance"
+version = "1.4.0"
+description = "Francisco Bispo's utilities for Financial Operations"
+authors = [
+    { name = "Francisco C J Bispo", email = "fcjbispo@gmail.com" }
+]
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "fbpyutils",
+    "yfinance>=0.2.54",
+    "pytest-mock>=3.14.0",
+    "requests>=2.32.3",
+    "pandas>=2.2.2",
+    "beautifulsoup4>=4.13.3",
+    "python-dateutil>=2.9.0.post0",
+    "lxml>=5.3.1",
+    "pytz>=2024.1,<2025.0",
+]
+
+[project.optional-dependencies]
+windows = [
+    "python-magic-bin>=0.4.14",
+]
+unix = [
+    "python-magic>=0.4.27",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "mock>=5.2.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "freezegun>=1.5.1",
+]
+
+[tool.uv.sources]
+fbpyutils = { url = "https://github.com/fcjbispo/builds/blob/d64fc42fd39bfab3189148a81b590ea624f29d01/fbpyutils/fbpyutils-1.6.1-py3-none-any.whl?raw=true" }

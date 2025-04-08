@@ -1,52 +1,43 @@
-# ---
-# jupyter:
-#   jupytext:
-#     text_representation:
-#       extension: .py
-#       format_name: light
-#       format_version: '1.5'
-#       jupytext_version: 1.14.7
-#   kernelspec:
-#     display_name: fbpyutils-finance--TrezB8H
-#     language: python
-#     name: python3
-# ---
-
 from fbpyutils import debug
 
-from fbpyutils.datetime import apply_timezone
-
-from typing import Dict
-import requests 
+from typing import Dict, Optional
+import requests
 import datetime
 from bs4 import BeautifulSoup
 
-from fbpyutils_finance import MARKET_INFO, first_or_none, numberize
+from fbpyutils_finance import numberize # Removed unused MARKET_INFO, first_or_none
 
 
 # -
 
-def _makeurl(x):
-    '''
-        Build default Bing search URL output.
-        Parameters:
-            x (str): The search query string
-        Returns:
-            str: A string with a full Google search URL from the search query.
-    '''    
+def _makeurl(x: str) -> str:
+    """
+    Build a Bing search URL from query string.
+
+    Args:
+        x (str): Search query to convert into URL
+
+    Returns:
+        str: Formatted Bing search URL
+
+    Example:
+        >>> _makeurl("test query")
+        'https://www.bing.com/search?q=test+query&qs=n&form=QBRE&sp=-1'
+    """
     q = '+'.join(x.split())
     url = f"https://www.bing.com/search?q={q}&qs=n&form=QBRE&sp=-1"
     return url
 
-
 def _bingsearch(x: str) -> requests.models.Response:
-    '''
-        Performs a default Bing search using custom headers.
-        Parameters:
-            x (str): The search query string
-        Returns:
-            http response: An HTTP response with the HTML page resulting from the search query.
-    '''
+    """
+    Performs a default Bing search using custom headers.
+
+    Args:
+        x (str): The search query string
+
+    Returns:
+        requests.models.Response: An HTTP response with the HTML page resulting from the search query.
+    """
     h = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -65,16 +56,25 @@ def _bingsearch(x: str) -> requests.models.Response:
 
 
 def stock_price(
-    x: str, market: str=None
+    x: str, market: Optional[str] = None
 ) -> Dict:
-    '''
-        Performs a Bing search for the current price of the supplied ticker in the default market.
-        Parameters:
-            x (str): The ticker to search for the current price.
-            market (str, Optional): The name of the market on which the ticker will be searched.
-        Returns:
-            dict: A standard dictionary with the stock price and information for the supplied ticker.
-    '''
+    """
+    Performs a Bing search for the current price of the supplied ticker.
+
+    Args:
+        x (str): The ticker symbol to search for.
+        market (Optional[str], optional): The market exchange symbol (e.g., 'BVMF', 'NASDAQ').
+                                          If provided, it's used to refine the search. Defaults to None.
+
+    Returns:
+        Dict: A dictionary containing the stock price information or an error message.
+              On success: {'info': 'STOCK PRICE', 'source': 'BING', 'status': 'SUCCESS',
+                           'details': {'market': str, 'ticker': str, 'name': str, 'currency': str,
+                                       'price': float, 'variation': None, 'variation_percent': None,
+                                       'trend': None, 'position_time': datetime}}
+              On error: {'info': 'STOCK PRICE', 'source': 'BING', 'status': 'ERROR',
+                         'details': {'error_message': str}}
+    """
     result = {
         'info': 'STOCK PRICE',
         'source': 'BING',
@@ -178,6 +178,4 @@ def stock_price(
     
     return result
 
-stock_price('XYLD')
-
-
+# Example usage removed: stock_price('XYLD')

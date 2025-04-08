@@ -4,7 +4,8 @@ Data Providers: BOVESPA Package.
 import os
 import requests
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, Optional, Tuple # Added date, Optional, Tuple, Dict, Any
 
 import fbpyutils_finance as FI
 from fbpyutils import file as F, xlsx as XL
@@ -14,15 +15,15 @@ _bvmf_cert=FI.CERTIFICATES['bvmf-bmfbovespa-com-br']
 
 
 class FetchModes:
-    '''
-    - Description: The  `FetchModes`  class defines different fetch modes for data retrieval.
-    - Functionality: This class provides constants representing different fetch modes.
-    - Attributes:
-    -  `LOCAL`  (int): Represents the fetch mode for local data retrieval. Value is  `0` .
-    -  `DOWNLOAD`  (int): Represents the fetch mode for downloading data. Value is  `1` .
-    -  `LOCAL_OR_DOWNLOAD`  (int): Represents the fetch mode for either local data retrieval or downloading data. Value is  `2` .
-    -  `STREAM`  (int): Represents the fetch mode for streaming data. Value is  `3` .
-    '''
+    """
+    Defines constants for different data retrieval modes used in StockHistory.
+
+    Attributes:
+        LOCAL (int): Fetch data only from local storage.
+        DOWNLOAD (int): Download data from the source.
+        LOCAL_OR_DOWNLOAD (int): Try local storage first, then download if not found or invalid.
+        STREAM (int): Fetch data as a stream (currently used similarly to DOWNLOAD).
+    """
     LOCAL = 0
     DOWNLOAD = 1
     LOCAL_OR_DOWNLOAD = 2
@@ -30,14 +31,18 @@ class FetchModes:
 
 
 class StockHistory():
-    '''
-    - Description: The  `class StockHistory`  class fetches stock history data from BOVESPA.
-    - Functionality: This class provides methods to download historical data using different periods and fetch modes and
-        return historical data as pandas dataframes.
-    - Attributes:
-    -  `download_folder`  (str): Local folder for data storage. Used do retrieve already downloaded data and/or 
-            update files with latest historic data. The data are stored as ZIP
-    '''
+    """
+    Fetches and processes historical stock data (COTAHIST) from the B3 website (formerly BOVESPA).
+
+    This class handles downloading the historical data files (ZIP format),
+    parsing the fixed-width text files within the ZIP, and returning the data
+    as a pandas DataFrame. It supports different fetching modes (local, download)
+    and time periods (daily, monthly, annual).
+
+    Attributes:
+        download_folder (str): The directory where downloaded COTAHIST ZIP files
+                               are stored and read from.
+    """
     _col_widths = [
         2,
         8,
@@ -196,25 +201,27 @@ class StockHistory():
 
 
     @staticmethod
-    def validate_period_date(period_date):
+    def validate_period_date(period_date: str) -> bool:
         """
-        Validates the given period date against supported formats.
+        Validates if a given string matches supported date formats ('%Y%m' or '%Y%m%d').
+
         Args:
-            period_date (str): The period date to be validated.
+            period_date (str): The date string to validate.
+
         Returns:
-            bool: Returns True if the date is valid, False otherwise.
+            bool: True if the string matches one of the supported formats.
+
         Raises:
-            ValueError: If the provided date format or value is invalid.
-        Supported date formats:
-            - '%Y%m': Year and month format (e.g., '202201')
-            - '%Y%m%d': Year, month, and day format (e.g., '20220101')
+            ValueError: If the string does not match any supported format.
         """
         formats = ['%Y%m', '%Y%m%d']  # Supported date formats
 
         for date_format in formats:
             try:
                 datetime.strptime(period_date, date_format)
-                return True  # Date is valid
+                # Check if the parsed date string matches the original format
+                if datetime.strptime(period_date, date_format).strftime(date_format) == period_date:
+                    return True  # Date is valid and matches format
             except ValueError:
                 pass
 
@@ -222,72 +229,88 @@ class StockHistory():
 
 
     @staticmethod
-    def to_float(x):
+    def to_float(x: Any) -> float:
         """
-        Converts a value to a float.
+        Converts a B3-formatted price string (last 2 chars are decimals) or any value to float.
+
         Args:
-            x (str or any): The value to be converted to float.
+            x (Any): The value to convert. If string, assumes B3 price format (e.g., '12345' -> 123.45).
+
         Returns:
-            float: The converted float value of x.
-        Overview:
-        This method is used to convert a value to a float. 
-        If the value is a string, it joins the characters before the last two characters 
-        with a dot to create a decimal representation. 
-        If the value is not a string, it directly converts it to a float.
+            float: The converted float value.
         """
-        return float('.'.join([x[0:-2], x[-2:]])) if type(x) == str else float(x)
+        return 0.0 if type(x) == str and not x else float('.'.join([x[0:-2], x[-2:]])) if type(x) == str else float(x)
 
 
     @staticmethod
-    def to_date(x, format='%Y%m%d'):
+    def to_date(x: Any, format: str = '%Y%m%d') -> Optional[date]:
         """
-        Converts a value to a date object.
+        Converts a value to a date object using pandas.to_datetime.
+
         Args:
-            x (str or any): The value to be converted to a date object.
-            format (str): Optional. The format of the input value. Default is '%Y%m%d'.
+            x (Any): The value to convert (typically a string like 'YYYYMMDD').
+            format (str, optional): The expected date format string. Defaults to '%Y%m%d'.
+
         Returns:
-            datetime.date: The converted date object.
-        Overview:
-        This method is used to convert a value to a date object using the specified format. 
-        It utilizes the pd.to_datetime() function from the pandas library to perform the conversion.
+            Optional[date]: The converted date object, or None if conversion fails ('ignore' errors).
         """
-        return pd.to_datetime(x, format=format, errors='ignore').date()
+        result = pd.to_datetime(x, format=format, errors='ignore')
+        if isinstance(result, str):
+            return None
+        if pd.isna(result):  # Check for NaT
+            return None
+        return result.date()
 
     @staticmethod
-    def get_info_tables():
-        info_tables_path = os.path.sep.join([
-            FI.APP_FOLDER, 'bovespa', 'tabelas_anexas_bovespa.xlsx'])
-        response = {
-            'status': 'OK'
-        }
+    def get_info_tables() -> Dict[str, Any]:
+        """
+        Reads auxiliary information tables from the 'tabelas_anexas_bovespa.xlsx' file.
+
+        This file contains mappings for codes used in the COTAHIST files (e.g., BDI codes, market types).
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the status and, on success,
+                            another dictionary 'tables' where keys are sheet names
+                            and values are pandas DataFrames of the sheet content.
+                            Example: {'status': 'OK', 'tables': {'bdi_codes': DataFrame, ...}, 'message': '...'}
+                            On error: {'status': 'ERROR', 'message': '...'}
+        """
+        info_tables_path = os.path.join(FI.APP_FOLDER, 'bovespa', 'tabelas_anexas_bovespa.xlsx')
+        response: Dict[str, Any] = {'status': 'OK', 'tables': {}, 'message': ''}
         try:
+            # Assuming XL.ExcelWorkbook and read_sheet are defined elsewhere in fbpyutils
             info_tables = XL.ExcelWorkbook(info_tables_path)
             response['tables'] = {}
-            for sheet in info_tables.sheet_names:
+            sheet_names = XL.get_sheet_names(info_tables_path) # Use get_sheet_names function
+            for sheet in sheet_names: # Iterate through sheet_names
+                # Assuming read_sheet returns a tuple/list of lists/tuples
                 info_data = tuple(info_tables.read_sheet(sheet))
-                response['tables'][sheet] = pd.DataFrame(
-                    info_data[1:], 
-                    columns=[c.lower() for c in info_data[0]]
-                )
-            response['message'] = f'All {len(info_tables.sheet_names)} fetched.'
+                if info_data and len(info_data) > 0:
+                    response['tables'][sheet] = pd.DataFrame(
+                        info_data[1:],
+                        columns=[str(c).lower() for c in info_data[0]] # Ensure columns are strings
+                    )
+                else:
+                     response['tables'][sheet] = pd.DataFrame() # Handle empty sheets
+            response['message'] = f'All {len(sheet_names)} sheets fetched.' # Use sheet_names variable
+            return response
         except Exception as e:
             response['status'] = 'ERROR'
             response['message'] = f'Error fetching bovespa info tables: {str(e)}'
+            response.pop('tables', None) # Remove tables key on error
+            return response
 
-        return response
-
-    def __init__(self, download_folder=None):
+    def __init__(self, download_folder: Optional[str] = None) -> None:
         """
-        Constructor method for a class.
+        Initializes the StockHistory instance.
+
         Args:
-            download_folder (str): Optional. The path to the download folder. Default is None.
+            download_folder (Optional[str], optional): The path to the folder for
+                storing/retrieving downloaded COTAHIST files. If None, defaults
+                to the user's home directory. Defaults to None.
+
         Raises:
-            OSError: If the download_folder path is invalid.
-        Overview:
-        This method is used to initialize an instance of the class. 
-        It sets the download_folder attribute based on the provided argument or the default value. 
-        It also performs some validations on the download_folder path to ensure it exists and is a folder. 
-        If the path is invalid, it raises an OSError with an appropriate error message.
+            OSError: If the specified download_folder does not exist or is not a directory.
         """
         if download_folder is None or len(download_folder) == 0:
             download_folder = os.path.expanduser('~')
@@ -301,32 +324,25 @@ class StockHistory():
         self.download_folder = download_folder
 
 
-    def _build_paths(self, period='A', period_date=None):
+    def _build_paths(self, period: str = 'A', period_date: Optional[str] = None) -> Tuple[str, str]:
         """
-        Builds the paths required for downloading historical data files.
+        Constructs the download URL and local file path for a COTAHIST file.
+
         Args:
-            period (str, optional): The period for which data is requested. Defaults to 'A'.
-                                    Possible values are 'A' for annual, 'M' for monthly, or 'D' for daily.
-            period_date (str or datetime, optional): The date for which data is requested. Defaults to None.
-                                                    Format must be '%Y' for annual, '%m%Y' for monthly,
-                                                    or '%d%m%Y' for daily.
-        Raises:
-            ValueError: If an invalid period is provided.
+            period (str, optional): The period type ('A' annual, 'M' monthly, 'D' daily). Defaults to 'A'.
+            period_date (Optional[str], optional): The specific date string for the period.
+                Format depends on the period:
+                - 'A': 'YYYY' (e.g., '2023')
+                - 'M': 'MMYYYY' (e.g., '012023')
+                - 'D': 'DDMMYYYY' (e.g., '15012023')
+                If None, defaults to the current year (A), current month/year (M),
+                or yesterday (D). Defaults to None.
+
         Returns:
-            tuple: A tuple containing the URL for downloading the data file and the output file path.
-        Overview:
-        This function builds the URL and output file path required for downloading historical data files.
-        It takes the period and period_date as inputs, and based on their values, constructs the cotfile name,
-        URL, and output file path.
-        If the period is 'A' (annual), the period_date is set to the current year if not provided.
-        If the period is 'M' (monthly), the period_date is set to the current month and year if not provided.
-        If the period is 'D' (daily), the period_date is set to yesterday's date if not provided.
-        The cotfile name is constructed by concatenating the period and period_date with 'COTAHIST_' prefix
-        and '.ZIP' suffix.
-        The URL is constructed by appending the cotfile name to the base URL 
-        'https://bvmf.bmfbovespa.com.br/InstDados/SerHist/'.
-        The output file path is constructed by joining the download folder path with the cotfile name.
-        The function returns a tuple containing the URL and output file path.
+            Tuple[str, str]: A tuple containing (download_url, local_filepath).
+
+        Raises:
+            ValueError: If the period is invalid or period_date format is incorrect.
         """
         period = period or 'A'
 
@@ -353,26 +369,21 @@ class StockHistory():
         return url, output_file
 
 
-    def _download_stock_history(self, period='A', period_data=None):
+    def _download_stock_history(self, period: str = 'A', period_data: Optional[str] = None) -> str:
         """
-        Downloads the stock history data file.
+        Downloads a COTAHIST ZIP file for the specified period.
+
         Args:
-            period (str, optional): The period for which data is requested. Defaults to 'A'.
-                                    Possible values are 'A' for annual, 'M' for monthly, or 'D' for daily.
-            period_data (str or datetime, optional): The date for which data is requested. Defaults to None.
-                                                    Format must be '%Y' for annual, '%m%Y' for monthly,
-                                                    or '%d%m%Y' for daily.
+            period (str, optional): Period type ('A', 'M', 'D'). Defaults to 'A'.
+            period_data (Optional[str], optional): Specific date string for the period. Defaults to None.
+
         Returns:
-            str: The path of the downloaded stock history data file.
-        Overview:
-        This function downloads the stock history data file from a given URL and saves it to the specified output file path.
-        It takes the period and period_data as inputs and uses them to build the URL and output file path by calling the
-        `_build_paths` method.
-        The block_size variable is set to 1 GB (1024**3) for streaming the response content in chunks.
-        The requests library is used to send a GET request to the URL with streaming enabled and certificate verification.
-        The response content is iterated in chunks, and each chunk is written to the output file using the handle.
-        This allows downloading large files in a memory-efficient manner.
-        Finally, the function returns the path of the downloaded stock history data file.
+            str: The full path to the downloaded ZIP file.
+
+        Raises:
+            requests.exceptions.RequestException: If the download fails.
+            ValueError: If period or period_data are invalid (via _build_paths).
+            OSError: If file writing fails.
         """
         url, output_file = self._build_paths(period, period_data)
 
@@ -387,22 +398,22 @@ class StockHistory():
         return output_file
 
 
-    def _treat_data(self, data, original_names, compact):
+    def _treat_data(self, data: pd.DataFrame, original_names: bool, compact: bool) -> pd.DataFrame:
         """
-        Treats the provided data by applying transformations and returning the processed data.
+        Processes the raw DataFrame read from the COTAHIST file.
+
+        This includes filtering for actual stock records (record_type '1'),
+        converting date and numeric columns to appropriate types, handling NaNs,
+        and optionally selecting a compact set of columns or renaming columns
+        to their original Portuguese names.
+
         Args:
-            data (pandas.DataFrame): The input data to be treated.
-            original_names (bool): Flag indicating whether to use original column names or not.
-            compact (bool): Flag indicating whether to return compact data or not.
+            data (pd.DataFrame): The raw DataFrame read from the file.
+            original_names (bool): If True, rename columns to original names (e.g., 'datpre').
+            compact (bool): If True, select only a subset of essential columns.
+
         Returns:
-            pandas.DataFrame: The treated data.
-        Functionality:
-        - Filters the data to include only records with 'record_type' equal to '1'.
-        - Applies transformations to specific columns using the 'to_float' and 'to_date' functions.
-        - Fills any missing values with 0.
-        - If 'original_names' is True, assigns original column names to the treated data.
-        - If 'compact' is True, returns a subset of columns based on either original or modified column names.
-        - Otherwise, returns the entire treated data.
+            pd.DataFrame: The processed DataFrame.
         """
         cot_data = data[data['record_type'] == '1'].copy(deep=True)
 
@@ -430,19 +441,16 @@ class StockHistory():
                 return cot_data
 
 
-    def _check_local_history(self, period='A', period_data=None):
+    def _check_local_history(self, period: str = 'A', period_data: Optional[str] = None) -> bool:
         """
-        Checks if the local history file exists and is a valid zip file for the specified period and period data.
+        Checks if a valid COTAHIST ZIP file exists locally for the given period.
+
         Args:
-            period (str, optional): The period for which the local history is checked. Default is 'A'.
-            period_data (str, optional): The specific period data to be checked. Default is None.
+            period (str, optional): Period type ('A', 'M', 'D'). Defaults to 'A'.
+            period_data (Optional[str], optional): Specific date string for the period. Defaults to None.
+
         Returns:
-            bool: True if the local history file exists, is a file, and has a mime type of 'application/zip'. False otherwise.
-        Functionality:
-        - Builds the local file path using the specified period and period data.
-        - Checks if the local file exists, is a file, and has a mime type of 'application/zip'.
-        - Returns True if all the conditions are met, indicating that the local history file is valid.
-        - Returns False otherwise.
+            bool: True if a valid local ZIP file exists, False otherwise.
         """
         _, local_file = self._build_paths(period, period_data)
 
@@ -454,28 +462,29 @@ class StockHistory():
 
 
     def get_stock_history(
-        self, period='A', period_data=None, fetch_mode=FetchModes.LOCAL_OR_DOWNLOAD,
-        compact=True, original_names=False
-    ):
-        """Fetches stock history data based on the specified parameters.
+        self, period: str = 'A', period_data: Optional[str] = None,
+        fetch_mode: int = FetchModes.LOCAL_OR_DOWNLOAD,
+        compact: bool = True, original_names: bool = False
+    ) -> pd.DataFrame:
+        """
+        Fetches, parses, and processes B3 historical stock data (COTAHIST).
+
         Args:
-            period (str, optional): The period for which to fetch the stock history. Defaults to 'A'.
-            period_data (str or datetime, optional): Additional data specifying the period. Defaults to None.
-            fetch_mode (FetchModes, optional): The mode for fetching the data. Defaults to FetchModes.LOCAL_OR_DOWNLOAD.
-            compact (bool, optional): Flag for compact data format. Defaults to True.
-            original_names (bool, optional): Flag for using original column names. Defaults to False.
+            period (str, optional): Period type ('A', 'M', 'D'). Defaults to 'A'.
+            period_data (Optional[str], optional): Specific date string for the period. Defaults to None.
+            fetch_mode (int, optional): Fetch mode constant from FetchModes class.
+                                        Defaults to FetchModes.LOCAL_OR_DOWNLOAD.
+            compact (bool, optional): If True, return only essential columns. Defaults to True.
+            original_names (bool, optional): If True, use original Portuguese column names. Defaults to False.
+
         Returns:
-            pandas.core.frame.DataFrame: The fetched stock history data.
+            pd.DataFrame: A DataFrame containing the historical stock data.
+
         Raises:
-            ValueError: If an invalid fetch mode is provided.
-            OSError: If the local file is invalid or non-existent.
-            UnicodeDecodeError: If there is an error reading the stock history file with an unknown encoding.
-            TypeError: If the output data is not a pandas DataFrame.
-        Note:
-            - `FetchModes` is an enum representing different modes for fetching data.
-            - The method internally handles different fetch modes to determine how to fetch the stock history data.
-            - It also handles encoding-related errors while reading the data file.
-            - The fetched data is treated and returned in a pandas DataFrame format.
+            ValueError: If fetch_mode is invalid.
+            OSError: If local file access fails when required.
+            requests.exceptions.RequestException: If download fails.
+            Exception: For errors during file reading or processing.
         """
         if fetch_mode not in [
             FetchModes.LOCAL, FetchModes.DOWNLOAD, FetchModes.LOCAL_OR_DOWNLOAD,
@@ -514,8 +523,8 @@ class StockHistory():
                 cot = None
 
         if cot is None:
-            raise UnicodeDecodeError(
-                "Error reading stock history file. Unknown encoding.")
+            # Raise a runtime error as we couldn't decode the file with any known encoding
+            raise RuntimeError("Error reading stock history file. Unknown encoding.")
 
         if type(cot) != pd.core.frame.DataFrame:
             raise TypeError(
