@@ -65,12 +65,6 @@ def treasury_bonds(x: str=None) -> Dict:
     r = None
 
     try:
-        requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += cipher
-        try:
-            requests.packages.urllib3.contrib.pyopenssl.DEFAULT_SSL_CIPHER_LIST += cipher
-        except AttributeError:
-            # no pyopenssl support used / needed / available
-            pass         
 
         r = requests.get(u, verify=False, headers=h)
 
