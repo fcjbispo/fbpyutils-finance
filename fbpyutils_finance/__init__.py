@@ -290,8 +290,6 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
     Returns:
         pd.DataFrame: The original DataFrame with added columns:
             'Profit/Loss' (float): Total profit or loss for the asset.
-            'Adjusted Profit/Loss' (float): Profit/Loss adjusted so the minimum is zero.
-            'Weight' (float): Inverse of adjusted profit/loss (with smoothing).
             'Proportion' (float): Normalized weight, representing the investment proportion.
             'Investment Value' (float): Amount to invest in this asset based on proportion.
             'Quantity to Buy' (float): Number of shares to buy with the allocated investment value.
@@ -313,30 +311,26 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
 
     # Drop rows with NaN in essential columns after coercion
     df.dropna(subset=['Price', 'Quantity', 'Average Price'], inplace=True)
+
     if df.empty:
         # Return empty DataFrame with expected columns if all rows had NaNs
         return df.reindex(columns=list(df.columns) + ['Profit/Loss', 'Adjusted Profit/Loss', 'Weight', 'Proportion', 'Investment Value', 'Quantity to Buy'])
-
-
     # Calculate Profit/Loss
+
     df['Profit/Loss'] = (df['Price'] - df['Average Price']) * df['Quantity']
 
-    # Calculate Adjusted Profit/Loss (minimum value adjusted to zero)
-    min_profit_loss: float = df['Profit/Loss'].min()
-    df['Adjusted Profit/Loss'] = df['Profit/Loss'] - min_profit_loss
+    # this function sort a dataframe by a column in descent order and reindex from the top to bottom
+    df.sort_values(by='Profit/Loss', ascending=False, inplace=True)
+    df.reset_index(drop=True, inplace=True)
 
-    # Calculate Weight (using k = 0.01 to avoid division by zero or negative weights)
-    k: float = 0.01
-    # Ensure Adjusted Profit/Loss is non-negative before adding k
-    df['Weight'] = 1 / (df['Adjusted Profit/Loss'].clip(lower=0) + k)
+    # Calculate Adjusted Profit/Loss by adding the column 'Profit/Loss' the value of the row index plus 1
+    df['Adjusted Profit/Loss'] = abs(df['Profit/Loss']) + df.index + 1
 
-    # Calculate Proportion (normalize weights to sum to 1)
-    total_weights: float = df['Weight'].sum()
-    if total_weights == 0: # Avoid division by zero if all weights are zero
-        # Assign equal proportion or handle as error/specific case
-        df['Proportion'] = 1 / len(df) if len(df) > 0 else 0
-    else:
-        df['Proportion'] = df['Weight'] / total_weights
+    # Calculate Weight 
+    total_profit_loss: float = df['Adjusted Profit/Loss'].sum()
+
+    # Calculate Proportion
+    df['Proportion'] = df['Adjusted Profit/Loss'] / total_profit_loss
 
     # Calculate Investment Value (distribute total value according to proportion)
     df['Investment Value'] = df['Proportion'] * investment_amount
@@ -347,8 +341,7 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
         axis=1
     )
 
-    return df
-
+    return df[['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']].copy()
 
 if not os.path.exists(USER_APP_FOLDER):
     os.makedirs(USER_APP_FOLDER)

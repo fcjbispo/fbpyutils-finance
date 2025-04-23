@@ -37,6 +37,7 @@ dev = [
     "pytest-cov>=6.0.0",
     "pytest-mock>=3.14.0",
     "freezegun>=1.5.1",
+    "ipykernel>=6.29.5",
 ]
 
 [tool.uv.sources]
