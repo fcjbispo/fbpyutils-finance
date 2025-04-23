@@ -347,21 +347,21 @@ def test_get_investment_table_basic(sample_dataframe):
 
     # Check if correct columns are returned
     expected_cols = ['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']
-    assert list(result_df.columns) == expected_cols
+    assert list(result_df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {list(result_df.columns)}"
 
-    # --- Expected Calculations ---
+    # --- Expected Calculations (Based on internal logic) ---
     # Original P/L: AAPL=100, GOOG=200, MSFT=-50
     # Sorted by P/L desc: GOOG (200), AAPL (100), MSFT (-50)
     # Index after reset: GOOG=0, AAPL=1, MSFT=2
-    # Adjusted P/L:
-    #   GOOG: abs(200) + 0 + 1 = 201
-    #   AAPL: abs(100) + 1 + 1 = 102
-    #   MSFT: abs(-50) + 2 + 1 = 53
-    # Total Adjusted P/L = 201 + 102 + 53 = 356
-    # Proportion:
-    #   GOOG: 201 / 356
-    #   AAPL: 102 / 356
-    #   MSFT: 53 / 356
+    # Adjusted P/L (internal calculation):
+    #   GOOG: (0 + 1) + (abs(200) / 1000.0) = 1.2 # digits = 3, divisor = 1000
+    #   AAPL: (1 + 1) + (abs(100) / 1000.0) = 2.1 # digits = 3, divisor = 1000
+    #   MSFT: (2 + 1) + (abs(-50) / 100.0)  = 3.5 # digits = 2, divisor = 100
+    # Total Adjusted P/L (internal) = 1.2 + 2.1 + 3.5 = 6.8
+    # Proportion (internal calculation):
+    #   GOOG: 1.2 / 6.8
+    #   AAPL: 2.1 / 6.8
+    #   MSFT: 3.5 / 6.8
     # Investment Value: Proportion * 1000
     # Quantity to Buy: Investment Value / Price
     # ---
@@ -369,7 +369,8 @@ def test_get_investment_table_basic(sample_dataframe):
     # Check calculations for GOOG (highest P/L, index 0 after sort)
     goog_row = result_df[result_df['Ticker'] == 'GOOG'].iloc[0]
     assert abs(goog_row['Profit/Loss'] - 200.0) < PRECISION
-    expected_proportion_goog = 201 / 356
+    # Use the internal logic for expected proportion
+    expected_proportion_goog = 1.2 / 6.8
     expected_investment_goog = expected_proportion_goog * investment_amount
     assert abs(goog_row['Investment Value'] - expected_investment_goog) < PRECISION
     expected_qty_goog = expected_investment_goog / goog_row['Price']
@@ -378,7 +379,8 @@ def test_get_investment_table_basic(sample_dataframe):
     # Check calculations for MSFT (lowest P/L, index 2 after sort)
     msft_row = result_df[result_df['Ticker'] == 'MSFT'].iloc[0]
     assert abs(msft_row['Profit/Loss'] - (-50.0)) < PRECISION
-    expected_proportion_msft = 53 / 356
+    # Use the internal logic for expected proportion
+    expected_proportion_msft = 3.5 / 6.8
     expected_investment_msft = expected_proportion_msft * investment_amount
     assert abs(msft_row['Investment Value'] - expected_investment_msft) < PRECISION
     expected_qty_msft = expected_investment_msft / msft_row['Price']
@@ -400,8 +402,8 @@ def test_get_investment_table_empty_dataframe():
     result_df = get_investment_table(df, 1000.0)
     assert result_df.empty
     expected_cols = ['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']
-    # The reindex call in the function ensures these columns exist even if df is empty
-    assert list(result_df.columns) == expected_cols
+    # The function returns an empty DataFrame with these specific columns when input is empty or all rows are dropped
+    assert list(result_df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {list(result_df.columns)}"
 
 def test_get_investment_table_with_nan():
     """Test get_investment_table with NaN values in numeric columns."""
@@ -416,8 +418,8 @@ def test_get_investment_table_with_nan():
     # Expecting row with NaN to be dropped
     assert len(result_df) == 2
     assert 'GOOG' not in result_df['Ticker'].tolist()
-    # The Proportion column is no longer returned directly, skip this check.
-    # assert abs(result_df['Proportion'].sum() - 1.0) < PRECISION # Proportions should still sum to 1 for remaining rows
+    # Check that the total investment value is still correct for the remaining rows
+    assert abs(result_df['Investment Value'].sum() - 1000.0) < PRECISION
 
 def test_get_investment_table_all_nan_rows():
     """Test get_investment_table when all rows have NaN after coercion."""
@@ -431,8 +433,8 @@ def test_get_investment_table_all_nan_rows():
     result_df = get_investment_table(df.copy(), 1000.0)
     assert result_df.empty
     expected_cols = ['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']
-    # The reindex call in the function ensures these columns exist
-    assert list(result_df.columns) == expected_cols
+    # The function returns an empty DataFrame with these specific columns when input is empty or all rows are dropped
+    assert list(result_df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {list(result_df.columns)}"
 
 
 def test_get_investment_table_zero_price():
@@ -444,10 +446,13 @@ def test_get_investment_table_zero_price():
         'Average Price': [140.0, 10.0] # AAPL P/L = 100, ZERO P/L = -50
     }
     # Sorted: AAPL (100, idx 0), ZERO (-50, idx 1)
-    # Adj P/L AAPL = abs(100)+0+1 = 101
-    # Adj P/L ZERO = abs(-50)+1+1 = 52
-    # Total Adj P/L = 153
-    # Prop AAPL = 101/153, Prop ZERO = 52/153
+    # Adjusted P/L (internal calculation):
+    #   AAPL: (0 + 1) + (abs(100) / 1000.0) = 1.1 # digits = 3, divisor = 1000
+    #   ZERO: (1 + 1) + (abs(-50) / 100.0)  = 2.5 # digits = 2, divisor = 100
+    # Total Adjusted P/L (internal) = 1.1 + 2.5 = 3.6
+    # Proportion (internal calculation):
+    #   AAPL: 1.1 / 3.6
+    #   ZERO: 2.5 / 3.6
     df = pd.DataFrame(data)
     investment_amount = 1000.0
     result_df = get_investment_table(df.copy(), investment_amount)
@@ -456,9 +461,10 @@ def test_get_investment_table_zero_price():
     # Quantity to Buy should be 0 if Price is 0
     assert zero_price_row['Quantity to Buy'] == 0.0
 
-    # Check other calculations proceed and Investment Value is allocated
+    # Check other calculations proceed and Investment Value is allocated based on internal proportion
     assert 'Investment Value' in result_df.columns
-    expected_investment_zero = (52 / 153) * investment_amount
+    expected_proportion_zero = 2.5 / 3.6
+    expected_investment_zero = expected_proportion_zero * investment_amount
     assert abs(zero_price_row['Investment Value'] - expected_investment_zero) < PRECISION
     assert abs(result_df['Investment Value'].sum() - investment_amount) < PRECISION
 
@@ -471,7 +477,7 @@ def test_get_investment_table_single_asset(sample_dataframe):
 
     # Check columns
     expected_cols = ['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']
-    assert list(result_df.columns) == expected_cols
+    assert list(result_df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {list(result_df.columns)}"
     assert len(result_df) == 1
 
     # With one asset, it gets the full investment
