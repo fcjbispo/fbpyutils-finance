@@ -345,31 +345,47 @@ def test_get_investment_table_basic(sample_dataframe):
     investment_amount = 1000.0
     result_df = get_investment_table(sample_dataframe.copy(), investment_amount)
 
-    # Check if new columns are added
-    expected_new_cols = ['Profit/Loss', 'Adjusted Profit/Loss', 'Weight', 'Proportion', 'Investment Value', 'Quantity to Buy']
-    assert all(col in result_df.columns for col in expected_new_cols)
+    # Check if correct columns are returned
+    expected_cols = ['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']
+    assert list(result_df.columns) == expected_cols
 
-    # Check calculations for one row (e.g., AAPL)
-    # P/L = (150 - 140) * 10 = 100
-    # MSFT P/L = (300 - 310) * 5 = -50 (Min P/L)
-    # Adjusted P/L AAPL = 100 - (-50) = 150
-    # Weight AAPL = 1 / (150 + 0.01)
-    aapl_row = result_df[result_df['Ticker'] == 'AAPL'].iloc[0]
-    assert abs(aapl_row['Profit/Loss'] - 100.0) < PRECISION
-    min_pl = result_df['Profit/Loss'].min()
-    assert abs(aapl_row['Adjusted Profit/Loss'] - (100.0 - min_pl)) < PRECISION
-    expected_weight_aapl = 1 / ((100.0 - min_pl) + 0.01)
-    assert abs(aapl_row['Weight'] - expected_weight_aapl) < PRECISION
+    # --- Expected Calculations ---
+    # Original P/L: AAPL=100, GOOG=200, MSFT=-50
+    # Sorted by P/L desc: GOOG (200), AAPL (100), MSFT (-50)
+    # Index after reset: GOOG=0, AAPL=1, MSFT=2
+    # Adjusted P/L:
+    #   GOOG: abs(200) + 0 + 1 = 201
+    #   AAPL: abs(100) + 1 + 1 = 102
+    #   MSFT: abs(-50) + 2 + 1 = 53
+    # Total Adjusted P/L = 201 + 102 + 53 = 356
+    # Proportion:
+    #   GOOG: 201 / 356
+    #   AAPL: 102 / 356
+    #   MSFT: 53 / 356
+    # Investment Value: Proportion * 1000
+    # Quantity to Buy: Investment Value / Price
+    # ---
 
-    # Check if proportions sum to 1
-    assert abs(result_df['Proportion'].sum() - 1.0) < PRECISION
+    # Check calculations for GOOG (highest P/L, index 0 after sort)
+    goog_row = result_df[result_df['Ticker'] == 'GOOG'].iloc[0]
+    assert abs(goog_row['Profit/Loss'] - 200.0) < PRECISION
+    expected_proportion_goog = 201 / 356
+    expected_investment_goog = expected_proportion_goog * investment_amount
+    assert abs(goog_row['Investment Value'] - expected_investment_goog) < PRECISION
+    expected_qty_goog = expected_investment_goog / goog_row['Price']
+    assert abs(goog_row['Quantity to Buy'] - expected_qty_goog) < PRECISION
+
+    # Check calculations for MSFT (lowest P/L, index 2 after sort)
+    msft_row = result_df[result_df['Ticker'] == 'MSFT'].iloc[0]
+    assert abs(msft_row['Profit/Loss'] - (-50.0)) < PRECISION
+    expected_proportion_msft = 53 / 356
+    expected_investment_msft = expected_proportion_msft * investment_amount
+    assert abs(msft_row['Investment Value'] - expected_investment_msft) < PRECISION
+    expected_qty_msft = expected_investment_msft / msft_row['Price']
+    assert abs(msft_row['Quantity to Buy'] - expected_qty_msft) < PRECISION
 
     # Check if total investment value matches input
     assert abs(result_df['Investment Value'].sum() - investment_amount) < PRECISION
-
-    # Check quantity to buy calculation for AAPL
-    expected_qty_aapl = aapl_row['Investment Value'] / aapl_row['Price']
-    assert abs(aapl_row['Quantity to Buy'] - expected_qty_aapl) < PRECISION
 
 def test_get_investment_table_missing_columns():
     """Test get_investment_table when required columns are missing."""
@@ -383,7 +399,8 @@ def test_get_investment_table_empty_dataframe():
     df = pd.DataFrame(columns=['Ticker', 'Price', 'Quantity', 'Average Price'])
     result_df = get_investment_table(df, 1000.0)
     assert result_df.empty
-    expected_cols = ['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Adjusted Profit/Loss', 'Weight', 'Proportion', 'Investment Value', 'Quantity to Buy']
+    expected_cols = ['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']
+    # The reindex call in the function ensures these columns exist even if df is empty
     assert list(result_df.columns) == expected_cols
 
 def test_get_investment_table_with_nan():
@@ -399,7 +416,8 @@ def test_get_investment_table_with_nan():
     # Expecting row with NaN to be dropped
     assert len(result_df) == 2
     assert 'GOOG' not in result_df['Ticker'].tolist()
-    assert abs(result_df['Proportion'].sum() - 1.0) < PRECISION # Proportions should still sum to 1 for remaining rows
+    # The Proportion column is no longer returned directly, skip this check.
+    # assert abs(result_df['Proportion'].sum() - 1.0) < PRECISION # Proportions should still sum to 1 for remaining rows
 
 def test_get_investment_table_all_nan_rows():
     """Test get_investment_table when all rows have NaN after coercion."""
@@ -412,7 +430,8 @@ def test_get_investment_table_all_nan_rows():
     df = pd.DataFrame(data)
     result_df = get_investment_table(df.copy(), 1000.0)
     assert result_df.empty
-    expected_cols = ['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Adjusted Profit/Loss', 'Weight', 'Proportion', 'Investment Value', 'Quantity to Buy']
+    expected_cols = ['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']
+    # The reindex call in the function ensures these columns exist
     assert list(result_df.columns) == expected_cols
 
 
@@ -422,55 +441,48 @@ def test_get_investment_table_zero_price():
         'Ticker': ['AAPL', 'ZERO'],
         'Price': [150.0, 0.0], # Zero price for one stock
         'Quantity': [10, 5],
-        'Average Price': [140.0, 10.0]
+        'Average Price': [140.0, 10.0] # AAPL P/L = 100, ZERO P/L = -50
     }
+    # Sorted: AAPL (100, idx 0), ZERO (-50, idx 1)
+    # Adj P/L AAPL = abs(100)+0+1 = 101
+    # Adj P/L ZERO = abs(-50)+1+1 = 52
+    # Total Adj P/L = 153
+    # Prop AAPL = 101/153, Prop ZERO = 52/153
     df = pd.DataFrame(data)
-    result_df = get_investment_table(df.copy(), 1000.0)
+    investment_amount = 1000.0
+    result_df = get_investment_table(df.copy(), investment_amount)
     zero_price_row = result_df[result_df['Ticker'] == 'ZERO'].iloc[0]
+
     # Quantity to Buy should be 0 if Price is 0
     assert zero_price_row['Quantity to Buy'] == 0.0
-    # Other calculations should proceed
-    assert 'Proportion' in result_df.columns
-    assert abs(result_df['Proportion'].sum() - 1.0) < PRECISION
 
-def test_get_investment_table_zero_total_weights():
-    """Test get_investment_table when all adjusted P/L are negative or zero, leading to zero weights (edge case)."""
-    # This happens if Adjusted P/L + k results in values small enough that 1/x is effectively inf or NaN,
-    # or if all adjusted P/L are exactly -k (highly unlikely with float precision).
-    # Let's simulate a case where weights might become zero due to large negative P/L.
-    data = {
-        'Ticker': ['A', 'B'],
-        'Price': [1, 1],
-        'Quantity': [1, 1],
-        'Average Price': [1000000000, 1000000000] # Very large loss
-    }
-    df = pd.DataFrame(data)
-    # Mock the sum() to return 0 to force the specific branch
-    with patch('pandas.Series.sum', return_value=0.0) as mock_sum:
-        result_df = get_investment_table(df.copy(), 1000.0)
-        # Check if the mocked sum function was called at all
-        mock_sum.assert_called()
+    # Check other calculations proceed and Investment Value is allocated
+    assert 'Investment Value' in result_df.columns
+    expected_investment_zero = (52 / 153) * investment_amount
+    assert abs(zero_price_row['Investment Value'] - expected_investment_zero) < PRECISION
+    assert abs(result_df['Investment Value'].sum() - investment_amount) < PRECISION
 
-    # Expect equal proportion if total_weights is 0
-    assert len(result_df) == 2
-    assert abs(result_df['Proportion'].iloc[0] - 0.5) < PRECISION
-    assert abs(result_df['Proportion'].iloc[1] - 0.5) < PRECISION
-    assert abs(result_df['Investment Value'].sum() - 1000.0) < PRECISION
 
 def test_get_investment_table_single_asset(sample_dataframe):
     """Test get_investment_table with only one asset in the DataFrame."""
-    df_single = sample_dataframe.head(1).copy()
+    df_single = sample_dataframe.head(1).copy() # Takes AAPL: Price=150, Qty=10, Avg=140 -> P/L=100
     investment_amount = 500.0
     result_df = get_investment_table(df_single, investment_amount)
 
+    # Check columns
+    expected_cols = ['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']
+    assert list(result_df.columns) == expected_cols
     assert len(result_df) == 1
-    assert abs(result_df['Proportion'].iloc[0] - 1.0) < PRECISION
+
+    # With one asset, it gets the full investment
     assert abs(result_df['Investment Value'].iloc[0] - investment_amount) < PRECISION
+
+    # Check quantity calculation
     expected_qty = investment_amount / result_df['Price'].iloc[0]
     assert abs(result_df['Quantity to Buy'].iloc[0] - expected_qty) < PRECISION
-    # Adjusted P/L should be 0, Weight should be 1/k
-    assert abs(result_df['Adjusted Profit/Loss'].iloc[0] - 0.0) < PRECISION
-    assert abs(result_df['Weight'].iloc[0] - (1 / 0.01)) < PRECISION
+
+    # Check P/L calculation
+    assert abs(result_df['Profit/Loss'].iloc[0] - 100.0) < PRECISION
 
 
 # --- Tests for USER_APP_FOLDER creation ---

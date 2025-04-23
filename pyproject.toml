@@ -1,6 +1,6 @@
 [project]
 name = "fbpyutils-finance"
-version = "1.4.0"
+version = "1.4.1"
 description = "Francisco Bispo's utilities for Financial Operations"
 authors = [
     { name = "Francisco C J Bispo", email = "fcjbispo@gmail.com" }
@@ -16,6 +16,7 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "lxml>=5.3.1",
     "pytz>=2024.1,<2025.0",
+    "tabulate>=0.9.0",
 ]
 
 [project.optional-dependencies]

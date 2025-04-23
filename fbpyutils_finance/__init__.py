@@ -314,7 +314,13 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
 
     if df.empty:
         # Return empty DataFrame with expected columns if all rows had NaNs
-        return df.reindex(columns=list(df.columns) + ['Profit/Loss', 'Adjusted Profit/Loss', 'Weight', 'Proportion', 'Investment Value', 'Quantity to Buy'])
+        # Return empty DataFrame with the final expected columns
+        final_columns = list(df.columns) + ['Profit/Loss', 'Investment Value', 'Quantity to Buy']
+        # Ensure original columns are kept even if df was initially empty
+        original_cols = ['Ticker', 'Price', 'Quantity', 'Average Price']
+        # Combine and remove duplicates, maintaining order as much as possible
+        all_expected_cols = list(dict.fromkeys(original_cols + final_columns))
+        return pd.DataFrame(columns=all_expected_cols)
     # Calculate Profit/Loss
 
     df['Profit/Loss'] = (df['Price'] - df['Average Price']) * df['Quantity']
@@ -340,8 +346,8 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
         lambda row: row['Investment Value'] / row['Price'] if row['Price'] != 0 else 0,
         axis=1
     )
-
-    return df[['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']].copy()
+    return df
+    # return df[['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']].copy()
 
 if not os.path.exists(USER_APP_FOLDER):
     os.makedirs(USER_APP_FOLDER)
