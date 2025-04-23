@@ -219,7 +219,9 @@ class StockHistory():
         for date_format in formats:
             try:
                 datetime.strptime(period_date, date_format)
-                return True  # Date is valid
+                # Check if the parsed date string matches the original format
+                if datetime.strptime(period_date, date_format).strftime(date_format) == period_date:
+                    return True  # Date is valid and matches format
             except ValueError:
                 pass
 
@@ -237,7 +239,7 @@ class StockHistory():
         Returns:
             float: The converted float value.
         """
-        return float('.'.join([x[0:-2], x[-2:]])) if type(x) == str else float(x)
+        return 0.0 if type(x) == str and not x else float('.'.join([x[0:-2], x[-2:]])) if type(x) == str else float(x)
 
 
     @staticmethod
@@ -252,7 +254,12 @@ class StockHistory():
         Returns:
             Optional[date]: The converted date object, or None if conversion fails ('ignore' errors).
         """
-        return pd.to_datetime(x, format=format, errors='ignore').date()
+        result = pd.to_datetime(x, format=format, errors='ignore')
+        if isinstance(result, str):
+            return None
+        if pd.isna(result):  # Check for NaT
+            return None
+        return result.date()
 
     @staticmethod
     def get_info_tables() -> Dict[str, Any]:
@@ -274,7 +281,8 @@ class StockHistory():
             # Assuming XL.ExcelWorkbook and read_sheet are defined elsewhere in fbpyutils
             info_tables = XL.ExcelWorkbook(info_tables_path)
             response['tables'] = {}
-            for sheet in info_tables.sheet_names:
+            sheet_names = XL.get_sheet_names(info_tables_path) # Use get_sheet_names function
+            for sheet in sheet_names: # Iterate through sheet_names
                 # Assuming read_sheet returns a tuple/list of lists/tuples
                 info_data = tuple(info_tables.read_sheet(sheet))
                 if info_data and len(info_data) > 0:
@@ -284,13 +292,13 @@ class StockHistory():
                     )
                 else:
                      response['tables'][sheet] = pd.DataFrame() # Handle empty sheets
-            response['message'] = f'All {len(info_tables.sheet_names)} sheets fetched.'
+            response['message'] = f'All {len(sheet_names)} sheets fetched.' # Use sheet_names variable
+            return response
         except Exception as e:
             response['status'] = 'ERROR'
             response['message'] = f'Error fetching bovespa info tables: {str(e)}'
             response.pop('tables', None) # Remove tables key on error
-
-        return response
+            return response
 
     def __init__(self, download_folder: Optional[str] = None) -> None:
         """
@@ -515,8 +523,8 @@ class StockHistory():
                 cot = None
 
         if cot is None:
-            raise UnicodeDecodeError(
-                "Error reading stock history file. Unknown encoding.")
+            # Raise a runtime error as we couldn't decode the file with any known encoding
+            raise RuntimeError("Error reading stock history file. Unknown encoding.")
 
         if type(cot) != pd.core.frame.DataFrame:
             raise TypeError(

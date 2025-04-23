@@ -31,6 +31,8 @@ def get_ifix_data(ifix_page_url: str) -> pd.DataFrame:
         ifix_page.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
     except requests.exceptions.RequestException as e:
         raise SystemError(f"HTTP request failed for {ifix_page_url}: {e}")
+    except Exception as e:
+        raise SystemError(f"Unexpected error during HTTP request to {ifix_page_url}: {e}")
 
     soup = BeautifulSoup(ifix_page.text, BS4_PARSER)
     ifix_table_body = soup.find('tbody')

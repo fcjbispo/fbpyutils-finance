@@ -33,14 +33,38 @@ def any_to_number(value: Any) -> Optional[float]:
                          or results in an empty string after cleaning.
     """
     str_value = str(value).strip()
-    if str_value == '-':
+    if str_value == '-' or str_value == '':
         return None
 
-    # Take the part after the last space (e.g., 'R$ 1.234,56' -> '1.234,56')
-    numeric_part = str_value.split(' ')[-1]
+    # Remove percent sign and spaces inside the string
+    cleaned_str = str_value.replace('%', '').strip()
 
-    # Remove thousand separators (.), replace decimal comma (,) with dot (.), remove '%'
-    cleaned_value = numeric_part.replace('.', '').replace(',', '.').replace('%', '')
+    # Remove currency symbols and other prefixes, keep only number parts
+    # Take the last token with digits or separators
+    tokens = cleaned_str.split()
+    numeric_part = ''
+    for token in reversed(tokens):
+        if any(c.isdigit() for c in token):
+            numeric_part = token
+            break
+    if not numeric_part:
+        return None
+
+    # Always treat comma as decimal separator (Brazilian format)
+    if ',' in numeric_part:
+        # Remove all thousand separators (.) and replace decimal comma with dot
+        cleaned_value = numeric_part.replace('.', '').replace(',', '.')
+    else:
+        # Heuristic for thousands separator in Brazilian format without decimal comma
+        parts = numeric_part.split('.')
+        if len(parts) > 1:
+            last_part = parts[-1]
+            if len(last_part) == 3 and all(p.isdigit() for p in parts):
+                cleaned_value = ''.join(parts)
+            else:
+                cleaned_value = numeric_part.replace(',', '')
+        else:
+            cleaned_value = numeric_part.replace(',', '')
 
     if not cleaned_value:
         return None
@@ -48,5 +72,4 @@ def any_to_number(value: Any) -> Optional[float]:
     try:
         return float(cleaned_value)
     except ValueError:
-        # Return None if conversion fails
         return None

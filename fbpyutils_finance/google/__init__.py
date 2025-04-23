@@ -5,7 +5,7 @@ from fbpyutils import debug
 
 from fbpyutils.datetime import apply_timezone
 
-from typing import Dict
+from typing import Dict, Any, Optional
 import requests 
 import datetime
 from bs4 import BeautifulSoup
@@ -18,26 +18,30 @@ _numberize = numberize
 
 _first_or_none = first_or_none
 
-def _makeurl(x):
-    '''
-        Build default Google search URL output.
-        Parameters:
-            x (str): The search query string
-        Returns:
-            str: A string with a full Google search URL from the search query.
-    '''    
+def _makeurl(x: str) -> str:
+    """
+    Build a default Google search URL from a query string.
+
+    Args:
+        x (str): The search query string.
+
+    Returns:
+        str: A full Google search URL generated from the query.
+    """
     q = '+'.join(x.split())
     url = 'https://www.google.com/search?q=' + q + '&ie=utf-8&oe=utf-8&num=1&lr=lang_ptBR&hl=pt-BR'
     return url
 
-def _googlesearch(x: str) -> requests.models.Response:
-    '''
-        Performs a default Google search using custom headers.
-        Parameters:
-            x (str): The search query string
-        Returns:
-            http response: An HTTP response with the HTML page resulting from the search query.
-    '''
+def _googlesearch(x: str) -> requests.Response:
+    """
+    Perform a Google search request with custom headers.
+
+    Args:
+        x (str): The search query string.
+
+    Returns:
+        requests.Response: The HTTP response object containing the search result page.
+    """
     h = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -55,16 +59,19 @@ def _googlesearch(x: str) -> requests.models.Response:
     return r
 
 def exchange_rate(
-    x: str, y: str
-) -> Dict:
-    '''
-        Performs a Google search for the exchange rate from one currency to another.
-        Parameters:
-            x (str): The currency to be exchanged from.
-            y (str): The currency to be exchanged to.
-        Returns:
-            float: The exchange rate value for 1 unit of currency from x to y.
-    '''    
+    x: str,
+    y: str
+) -> Dict[str, Any]:
+    """
+    Perform a Google search to retrieve the exchange rate from one currency to another.
+
+    Args:
+        x (str): The source currency code (e.g., 'USD').
+        y (str): The target currency code (e.g., 'BRL').
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the exchange rate information, status, and details.
+    """
     result = {
         'info': 'EXCHANGE RATE',
         'source': 'GOOGLE',
@@ -136,16 +143,19 @@ def exchange_rate(
 
 
 def stock_price(
-    x: str, market: str=None
-) -> Dict:
-    '''
-        Performs a Google search for the current price of the supplied ticker in the default market.
-        Parameters:
-            x (str): The ticker to search for the current price.
-            market (str, Optional): The name of the market on which the ticker will be searched.
-        Returns:
-            dict: A standard dictionary with the stock price and information for the supplied ticker.
-    '''
+    x: str,
+    market: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Perform a Google search to retrieve the current stock price for a given ticker.
+
+    Args:
+        x (str): The ticker symbol to search for.
+        market (Optional[str]): The market identifier where the ticker is listed. If None, attempts to infer.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the stock price information, status, and details.
+    """
     result = {
         'info': 'STOCK PRICE',
         'source': 'GOOGLE',
@@ -195,7 +205,7 @@ def stock_price(
                     break
 
         # price, variation, variation_percent, trend_out
-        price_info = soup.findAll(name='div', class_="BNeawe iBp4i AP7Wnd")
+        price_info = soup.find_all(name='div', class_="BNeawe iBp4i AP7Wnd")
 
         try:
             price_out, variation_out, variation_percent_out = map(
@@ -217,7 +227,7 @@ def stock_price(
             raise ValueError('Unable to parse info: {}'.format('Market Info'))
 
         # date_time_info, currency
-        time_currency_info = soup.findAll(name='span', class_="r0bn4c rQMQod")
+        time_currency_info = soup.find_all(name='span', class_="r0bn4c rQMQod")
 
         date_time_info, currency = time_currency_info[1].text.split(' · ')[:-1]
 
