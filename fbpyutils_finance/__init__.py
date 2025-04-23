@@ -9,6 +9,7 @@ import os
 from typing import Any, Dict, List, Optional, Tuple # Removed random, Callable
 
 import pandas as pd
+import numpy as np
 
 from fbpyutils import file as F
 from . import utils # Import the new utils module
@@ -297,6 +298,28 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
     Raises:
         ValueError: If the input DataFrame is missing any of the required columns.
     """
+    def adjust_profit_loss(row):
+        abs_pl = row['Profit/Loss']
+        index = row.name
+        if pd.isna(abs_pl):
+            return np.nan
+        abs_pl = abs(abs_pl)
+
+        if abs_pl == 0:
+            digits = 0
+        elif 0 < abs_pl < 1:
+            digits = 0
+        else:
+            try:
+                digits = np.floor(np.log10(abs_pl)) + 1
+            except ValueError:
+                return np.nan
+        digits = int(digits)
+
+        divisor = 10.0 ** digits
+
+        return (index + 1) + (abs_pl / divisor)
+
     # Define required columns
     required_columns = {'Ticker', 'Price', 'Quantity', 'Average Price'}
 
@@ -330,7 +353,7 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
     df.reset_index(drop=True, inplace=True)
 
     # Calculate Adjusted Profit/Loss by adding the column 'Profit/Loss' the value of the row index plus 1
-    df['Adjusted Profit/Loss'] = abs(df['Profit/Loss']) + df.index + 1
+    df['Adjusted Profit/Loss'] = df.apply(adjust_profit_loss, axis=1)
 
     # Calculate Weight 
     total_profit_loss: float = df['Adjusted Profit/Loss'].sum()
@@ -346,8 +369,8 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
         lambda row: row['Investment Value'] / row['Price'] if row['Price'] != 0 else 0,
         axis=1
     )
-    return df
-    # return df[['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']].copy()
+
+    return df[['Ticker', 'Price', 'Quantity', 'Average Price', 'Profit/Loss', 'Investment Value', 'Quantity to Buy']].copy()
 
 if not os.path.exists(USER_APP_FOLDER):
     os.makedirs(USER_APP_FOLDER)
