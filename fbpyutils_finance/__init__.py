@@ -1,13 +1,3 @@
-"""
-Functions to perform financial calculations.
-
-
-# Related links:
-https://clubedospoupadores.com/educacao-financeira/calculadora-taxa.html
-https://www.youtube.com/watch?v=JOqK2EGdxbQ
-
-"""
-
 import os
 import fbpyutils
 

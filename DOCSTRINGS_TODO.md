@@ -5,11 +5,11 @@ Lista de arquivos Python no projeto fbpyutils_finance/ que precisam de revisão 
 ## Arquivos Principais
 - [x] fbpyutils_finance/__init__.py
 - [x] fbpyutils_finance/assessment.py
-- [ ] fbpyutils_finance/calculators.py
-- [ ] fbpyutils_finance/utils.py
+- [x] fbpyutils_finance/calculators.py
+- [x] fbpyutils_finance/utils.py
 
 ## Módulo Bing
-- [ ] fbpyutils_finance/bing/__init__.py
+- [x] fbpyutils_finance/bing/__init__.py
 
 ## Módulo Bovespa
 - [ ] fbpyutils_finance/bovespa/__init__.py
@@ -59,7 +59,7 @@ Lista de arquivos Python no projeto fbpyutils_finance/ que precisam de revisão 
 
 ## Progresso Geral
 - Total de arquivos: 38
-- Concluídos: 2
-- Pendentes: 36
+- Concluídos: 4
+- Pendentes: 34
 
 Atualize esta lista à medida que processar cada arquivo.

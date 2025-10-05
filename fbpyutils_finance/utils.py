@@ -1,9 +1,38 @@
 """
+fbpyutils_finance.utils - General Utility Functions
+
+Purpose: This module contains miscellaneous utility functions used across the fbpyutils_finance package for data conversion, list handling, HTTP headers for scraping, and database connection validation.
+
+Main contents:
+- numberize(): Converts string or number with commas to float
+- first_or_none(): Returns first item of list or None if empty
+- random_header(): Generates random HTTP headers for web requests
+- is_valid_db_connection(): Checks if an object has a callable 'execute' method like a DB connection
+
+High-level usage pattern:
+Import utilities as needed, e.g., from fbpyutils_finance.utils import numberize, random_header. Use for data cleaning, safe list access, or request headers.
+
+Examples:
+>>> from fbpyutils_finance.utils import numberize, first_or_none
+>>> num = numberize("1,234.56")
+>>> print(num)
+1234.56
+>>> items = [1, 2, 3]
+>>> first = first_or_none(items)
+>>> print(first)
+1
+>>> empty_first = first_or_none([])
+>>> print(empty_first)
+None
+"""
+"""
 Module containing general utility functions.
 """
 
 import random
 from typing import Any, Dict, List, Optional
+
+from fbpyutils_finance import logger
 
 
 def numberize(value: Any) -> float:
@@ -15,8 +44,16 @@ def numberize(value: Any) -> float:
 
     Returns:
         float: The converted float value.
+
+    Examples:
+        >>> numberize("1,234.56")
+        1234.56
+        Minimal usage: Converts string with commas to float, returns 1234.56 for input "1,234.56".
     """
-    return float(str(value).replace(",", ""))
+    logger.info(f"numberize entry: value={value}")
+    result = float(str(value).replace(",", ""))
+    logger.info(f"numberize exit: returning {result}")
+    return result
 
 
 def first_or_none(items: List[Any]) -> Optional[Any]:
@@ -28,8 +65,18 @@ def first_or_none(items: List[Any]) -> Optional[Any]:
 
     Returns:
         Optional[Any]: The first item or None.
+
+    Examples:
+        >>> first_or_none([1, 2, 3])
+        1
+        >>> first_or_none([])
+        None
+        Minimal usage: Returns first item or None if empty, returns 1 for [1,2,3], None for [].
     """
-    return None if len(items) == 0 else items[0]
+    logger.info(f"first_or_none entry: items_len={len(items)}")
+    result = None if len(items) == 0 else items[0]
+    logger.info(f"first_or_none exit: returning {result}")
+    return result
 
 
 def random_header() -> Dict[str, str]:
@@ -38,7 +85,14 @@ def random_header() -> Dict[str, str]:
 
     Returns:
         Dict[str, str]: A dictionary containing common HTTP headers.
+
+    Examples:
+        >>> headers = random_header()
+        >>> print(headers['User-Agent'])
+        Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0  # Example output, actual random
+        Minimal usage: Returns random headers dict, User-Agent varies from predefined list.
     """
+    logger.info("random_header entry")
     _headers = [
         {
             "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0",
@@ -86,7 +140,9 @@ def random_header() -> Dict[str, str]:
             "Upgrade-Insecure-Requests": "1",
         },
     ]
-    return random.choice(_headers)
+    result = random.choice(_headers)
+    logger.info(f"random_header exit: returning headers with User-Agent={result['User-Agent']}")
+    return result
 
 
 def is_valid_db_connection(conn: Any) -> bool:
@@ -99,5 +155,20 @@ def is_valid_db_connection(conn: Any) -> bool:
 
     Returns:
         bool: True if the variable has a callable 'execute' method, False otherwise.
+
+    Examples:
+        >>> class MockConn:
+        ...     def execute(self): pass
+        >>> is_valid_db_connection(MockConn())
+        True
+        >>> is_valid_db_connection("not a conn")
+        False
+        Minimal usage: Validates DB-like object, returns True if 'execute' is callable, False otherwise.
     """
-    return hasattr(conn, "execute") and callable(getattr(conn, "execute"))
+    logger.info(f"is_valid_db_connection entry: conn_type={type(conn)}")
+    has_execute = hasattr(conn, "execute")
+    is_callable = callable(getattr(conn, "execute")) if has_execute else False
+    logger.debug(f"Decision branch: has_execute={has_execute}, is_callable={is_callable}")
+    result = has_execute and is_callable
+    logger.info(f"is_valid_db_connection exit: returning {result}")
+    return result

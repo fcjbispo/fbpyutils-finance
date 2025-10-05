@@ -1,5 +1,24 @@
 """
-Data Providers: BOVESPA Package.
+fbpyutils_finance.bovespa - B3 (Bovespa) Historical Stock Data Provider
+
+Purpose: This module provides classes and functions to fetch, download, parse, and process historical stock data (COTAHIST) from B3 (Brazilian stock exchange), including ZIP file handling, fixed-width parsing, column conversion, and data validation for periods (daily, monthly, annual).
+
+Main contents:
+- FetchModes (class): Constants for data fetching modes (LOCAL, DOWNLOAD, etc.)
+- StockHistory (class): Main class for handling B3 historical data, with methods for path building, downloading, data treatment, local checks, and getting history
+- Static methods: validate_period_date(), to_float(), to_date(), get_info_tables()
+
+High-level usage pattern:
+Import StockHistory and create instance with download_folder, then call get_stock_history(period='A', fetch_mode=FetchModes.LOCAL_OR_DOWNLOAD) to get DataFrame of stock data.
+
+Examples:
+>>> from fbpyutils_finance.bovespa import StockHistory
+>>> history = StockHistory(download_folder='~/bovespa_data')
+>>> df = history.get_stock_history(period='A', period_data='2023')
+>>> print(df.head())
+   datpre  codbdi  tpmerc  codneg  nomres  especi  ...  preult  totneg  quotot  voltot
+0  20230103      2       1    A1AA11  A1AA11  A1AA11  ...    1234  1000   1234567
+... (actual data varies)
 """
 
 import os
