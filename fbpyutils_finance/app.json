@@ -1,0 +1,19 @@
+{
+  "app": {
+    "name": "FBPyUtils-Finance",
+    "version": "1.5.0",
+    "environment": "dev",
+    "appcode": "FBPYUTILS_FINANCE",
+    "year": 2025
+  },
+  "logging": {
+    "log_level": "INFO",
+    "log_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "log_file_path": "~/.fbpyutils_finance/logs/app.log",
+    "log_handlers": ["file"]
+  },
+  "config": {
+    "example_key": "example_value",
+    "another_key": 12345
+  }
+}

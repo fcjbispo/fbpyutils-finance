@@ -5,10 +5,11 @@ import requests
 import datetime
 from bs4 import BeautifulSoup
 
-from fbpyutils_finance import numberize # Removed unused MARKET_INFO, first_or_none
+from fbpyutils_finance import numberize  # Removed unused MARKET_INFO, first_or_none
 
 
 # -
+
 
 def _makeurl(x: str) -> str:
     """
@@ -24,9 +25,10 @@ def _makeurl(x: str) -> str:
         >>> _makeurl("test query")
         'https://www.bing.com/search?q=test+query&qs=n&form=QBRE&sp=-1'
     """
-    q = '+'.join(x.split())
+    q = "+".join(x.split())
     url = f"https://www.bing.com/search?q={q}&qs=n&form=QBRE&sp=-1"
     return url
+
 
 def _bingsearch(x: str) -> requests.models.Response:
     """
@@ -39,13 +41,13 @@ def _bingsearch(x: str) -> requests.models.Response:
         requests.models.Response: An HTTP response with the HTML page resulting from the search query.
     """
     h = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'pt-BR,pt;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
+        "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "pt-BR,pt;q=0.5",
+        "Accept-Encoding": "gzip, deflate",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
     }
 
     s = requests.Session()
@@ -55,9 +57,7 @@ def _bingsearch(x: str) -> requests.models.Response:
     return r
 
 
-def stock_price(
-    x: str, market: Optional[str] = None
-) -> Dict:
+def stock_price(x: str, market: Optional[str] = None) -> Dict:
     """
     Performs a Bing search for the current price of the supplied ticker.
 
@@ -76,29 +76,31 @@ def stock_price(
                          'details': {'error_message': str}}
     """
     result = {
-        'info': 'STOCK PRICE',
-        'source': 'BING',
-        'status': 'SUCCESS',
-        'details': {}
+        "info": "STOCK PRICE",
+        "source": "BING",
+        "status": "SUCCESS",
+        "details": {},
     }
 
     try:
         if not x:
-            raise ValueError('Ticker is required')
+            raise ValueError("Ticker is required")
 
-        token, ticker = 'Cotação', x.upper()
+        token, ticker = "Cotação", x.upper()
 
-        search = ' '.join([':'.join([market.upper(), ticker]) if market else ticker, token])
+        search = " ".join(
+            [":".join([market.upper(), ticker]) if market else ticker, token]
+        )
 
         response = _bingsearch(search)
 
         if response.status_code != 200:
-            raise ValueError('Bing Search Fail!')
+            raise ValueError("Bing Search Fail!")
 
         soup = BeautifulSoup(response.text, "html.parser")
 
-        step = 'Search: ticker_name, market'
-        head = soup.find_all("div" , class_='b_tophbh bgtopwh' )
+        step = "Search: ticker_name, market"
+        head = soup.find_all("div", class_="b_tophbh bgtopwh")
 
         element1, element2 = None, None
         for e in head:
@@ -111,38 +113,39 @@ def stock_price(
                 break
 
         if all([element1, element2]):
-            ticker_name, market, ticker = element1.text, *element2.text.replace(' ', '').split(':')
+            ticker_name, market, ticker = (
+                element1.text,
+                *element2.text.replace(" ", "").split(":"),
+            )
         else:
-            raise ValueError(f'Bing Search Fail on step {step}!')
+            raise ValueError(f"Bing Search Fail on step {step}!")
 
-
-        step = 'Search: price, currency'
-        head = soup.find_all('div', class_='b_tophbb bgtopgr')
+        step = "Search: price, currency"
+        head = soup.find_all("div", class_="b_tophbb bgtopgr")
 
         element2, element3 = None, None
         for e in head:
-            element1 = e.find('div', class_='fin_quotePrice')
+            element1 = e.find("div", class_="fin_quotePrice")
             if element1:
-                element2 = element1.find_all('div', class_='b_hPanel')
+                element2 = element1.find_all("div", class_="b_hPanel")
                 if element2:
                     for e1 in element2:
-                        element3 = e1.find('span', class_='price_curr')
+                        element3 = e1.find("span", class_="price_curr")
                         if element3:
                             break
 
         for e in head:
-            element1 = e.find_all('div', id='Finance_Quote')
+            element1 = e.find_all("div", id="Finance_Quote")
             if element1:
                 for e1 in element1:
-                    element2 = e1.find('div', class_="b_focusTextMedium")
+                    element2 = e1.find("div", class_="b_focusTextMedium")
                     if element2:
                         break
 
         if all([element2, element3]):
-            price, currency= numberize(element2.text), element3.text
+            price, currency = numberize(element2.text), element3.text
         else:
-            raise ValueError(f'Bing Search Fail on step {step}!')
-
+            raise ValueError(f"Bing Search Fail on step {step}!")
 
         # step = 'Search: position date'
         # element2 = None
@@ -158,24 +161,23 @@ def stock_price(
         # else:
         #     raise ValueError(f'Bing Search Fail on step {step}!')
 
-        result['details'] = {
-            'market': market,
-            'ticker': ticker,
-            'name': ticker_name,
-            'currency': currency,
-            'price': price,
-            'variation': None,
-            'variation_percent': None,
-            'trend': None,
-            'position_time':  datetime.datetime.now()
+        result["details"] = {
+            "market": market,
+            "ticker": ticker,
+            "name": ticker_name,
+            "currency": currency,
+            "price": price,
+            "variation": None,
+            "variation_percent": None,
+            "trend": None,
+            "position_time": datetime.datetime.now(),
         }
     except Exception as e:
-        m =  debug.debug_info(e)
-        result['status'] = 'ERROR'
-        result['details'] = {
-            'error_message': m
-        }
-    
+        m = debug.debug_info(e)
+        result["status"] = "ERROR"
+        result["details"] = {"error_message": m}
+
     return result
+
 
 # Example usage removed: stock_price('XYLD')

@@ -1,35 +1,63 @@
 import os
+
 # Removed unused imports: re, sqlite3, datetime from datetime, XL from fbpyutils
-import os
 import pandas as pd
 from multiprocessing import Pool
 import warnings
-from typing import List, Tuple, Callable, Any, Optional # Added imports
+from typing import List, Tuple, Callable, Any, Optional  # Added imports
 
 from fbpyutils import file as FU
 
-from fbpyutils_finance.cei.schemas import \
-    process_schema_movimentacao, process_schema_eventos_provisionados, process_schema_negociacao, \
-    process_schema_posicao_acoes, process_schema_posicao_emprestimo_ativos, process_schema_posicao_etf, \
-    process_schema_posicao_fundos_investimento, process_schema_posicao_tesouro_direto, \
-    process_schema_posicao_renda_fixa
+from fbpyutils_finance.cei.schemas import (
+    process_schema_movimentacao,
+    process_schema_eventos_provisionados,
+    process_schema_negociacao,
+    process_schema_posicao_acoes,
+    process_schema_posicao_emprestimo_ativos,
+    process_schema_posicao_etf,
+    process_schema_posicao_fundos_investimento,
+    process_schema_posicao_tesouro_direto,
+    process_schema_posicao_renda_fixa,
+)
 
 warnings.simplefilter("ignore")
 
 _OPERATIONS = (
-    ('movimentacao', 'movimentacao-*.xlsx', process_schema_movimentacao, True),
-    ('eventos_provisionados', 'eventos-*.xlsx', process_schema_eventos_provisionados, True),
-    ('negociacao', 'negociacao-*.xlsx', process_schema_negociacao, True),
-    ('posicao_acoes', 'posicao-*.xlsx', process_schema_posicao_acoes, True),
-    ('posicao_emprestimo_ativos', 'posicao-*.xlsx', process_schema_posicao_emprestimo_ativos, True),
-    ('posicao_etf', 'posicao-*.xlsx', process_schema_posicao_etf, True),
-    ('posicao_fundos_investimento', 'posicao-*.xlsx', process_schema_posicao_fundos_investimento, True),
-    ('posicao_tesouro_direto', 'posicao-*.xlsx', process_schema_posicao_tesouro_direto, True),
-    ('posicao_renda_fixa', 'posicao-*.xlsx', process_schema_posicao_renda_fixa, True),
+    ("movimentacao", "movimentacao-*.xlsx", process_schema_movimentacao, True),
+    (
+        "eventos_provisionados",
+        "eventos-*.xlsx",
+        process_schema_eventos_provisionados,
+        True,
+    ),
+    ("negociacao", "negociacao-*.xlsx", process_schema_negociacao, True),
+    ("posicao_acoes", "posicao-*.xlsx", process_schema_posicao_acoes, True),
+    (
+        "posicao_emprestimo_ativos",
+        "posicao-*.xlsx",
+        process_schema_posicao_emprestimo_ativos,
+        True,
+    ),
+    ("posicao_etf", "posicao-*.xlsx", process_schema_posicao_etf, True),
+    (
+        "posicao_fundos_investimento",
+        "posicao-*.xlsx",
+        process_schema_posicao_fundos_investimento,
+        True,
+    ),
+    (
+        "posicao_tesouro_direto",
+        "posicao-*.xlsx",
+        process_schema_posicao_tesouro_direto,
+        True,
+    ),
+    ("posicao_renda_fixa", "posicao-*.xlsx", process_schema_posicao_renda_fixa, True),
 )
 
 
-def _process_operation(operation: Tuple[str, str, str, Callable]) -> Tuple[str, int, Optional[pd.DataFrame]]:
+def _process_operation(
+    operation: Tuple[str, str, str, Callable],
+) -> Tuple[str, int, Optional[pd.DataFrame]]:
     """
     Processes a single CEI data operation type.
 
@@ -59,7 +87,9 @@ def _process_operation(operation: Tuple[str, str, str, Callable]) -> Tuple[str, 
     return (op_name, rows, data)
 
 
-def get_cei_data(input_folder: str, parallelize: bool = True) -> List[Tuple[str, int, Optional[pd.DataFrame]]]:
+def get_cei_data(
+    input_folder: str, parallelize: bool = True
+) -> List[Tuple[str, int, Optional[pd.DataFrame]]]:
     """
     Retrieves and processes various types of CEI data from Excel files in a specified folder.
 
@@ -79,15 +109,22 @@ def get_cei_data(input_folder: str, parallelize: bool = True) -> List[Tuple[str,
             - rows (int): The number of rows in the processed DataFrame (0 if None).
             - data (Optional[pd.DataFrame]): The processed data as a DataFrame, or None.
     """
-    PARALLELIZE = parallelize and os.cpu_count()>1
+    PARALLELIZE = parallelize and os.cpu_count() > 1
     operations = []
 
     for op, mask, processor, enabled in _OPERATIONS:
-        if enabled: 
-            operations.append((op, input_folder, mask, processor,))
-    
+        if enabled:
+            operations.append(
+                (
+                    op,
+                    input_folder,
+                    mask,
+                    processor,
+                )
+            )
+
     operations = tuple(operations)
-    
+
     if PARALLELIZE:
         with Pool(os.cpu_count()) as p:
             data = p.map(_process_operation, operations)
@@ -95,5 +132,5 @@ def get_cei_data(input_folder: str, parallelize: bool = True) -> List[Tuple[str,
         data = []
         for operation in operations:
             data.append(_process_operation(operation))
-    
+
     return data

@@ -7,7 +7,11 @@ from typing import List, Dict, Any, Optional
 
 # Import functions from submodules
 from .constants import (
-    FIIS_PAYMENT_URL, IFIX_PAGE_URL, FIIS_DY_DETAILS_URL, CAPTURE_DATE, PARALLELIZE as DEFAULT_PARALLELIZE
+    FIIS_PAYMENT_URL,
+    IFIX_PAGE_URL,
+    FIIS_DY_DETAILS_URL,
+    CAPTURE_DATE,
+    PARALLELIZE as DEFAULT_PARALLELIZE,
 )
 from .payments import get_fii_all_payment_data
 from .ifix import get_ifix_data
@@ -15,17 +19,27 @@ from .ranking import get_fii_dy_ranking_data
 from .indicators import get_fii_indicators
 
 # Publicly expose the main function
-__all__ = ['get_fii_daily_position']
+__all__ = ["get_fii_daily_position"]
 
 
 def _create_db_indexes(cursor: sqlite3.Cursor):
     """Creates indexes on the SQLite tables for faster joins."""
     try:
-        cursor.execute('create index fii_payment_calendar_i01 on fii_payment_calendar (substr(payment_date, 1, 4))')
-        cursor.execute('create index fii_payment_calendar_i02 on fii_payment_calendar (payment_date, ticker)')
-        cursor.execute('create index fii_ifix_position_i01 on fii_ifix_position (ticker)')
-        cursor.execute('create index fii_dividend_yeld_ranking_i01 on fii_dividend_yeld_ranking (ticker)')
-        cursor.execute('create index fii_indicators_i01 on fii_indicators (ticker)') # Index added for indicators table
+        cursor.execute(
+            "create index fii_payment_calendar_i01 on fii_payment_calendar (substr(payment_date, 1, 4))"
+        )
+        cursor.execute(
+            "create index fii_payment_calendar_i02 on fii_payment_calendar (payment_date, ticker)"
+        )
+        cursor.execute(
+            "create index fii_ifix_position_i01 on fii_ifix_position (ticker)"
+        )
+        cursor.execute(
+            "create index fii_dividend_yeld_ranking_i01 on fii_dividend_yeld_ranking (ticker)"
+        )
+        cursor.execute(
+            "create index fii_indicators_i01 on fii_indicators (ticker)"
+        )  # Index added for indicators table
     except sqlite3.OperationalError as e:
         # Handle cases where index might already exist if run multiple times in same session (though unlikely with :memory:)
         print(f"Warning: Could not create index, it might already exist. Error: {e}")
@@ -61,46 +75,53 @@ def get_fii_daily_position(parallelize: Optional[bool] = None) -> pd.DataFrame:
         Exception: Catches other potential errors during processing.
     """
     should_parallelize = parallelize if parallelize is not None else DEFAULT_PARALLELIZE
-    use_multiprocessing = should_parallelize and os.cpu_count() is not None and os.cpu_count() > 1
+    use_multiprocessing = (
+        should_parallelize and os.cpu_count() is not None and os.cpu_count() > 1
+    )
 
     # Use in-memory SQLite database
     db: Optional[sqlite3.Connection] = None
     try:
-        db = sqlite3.connect(':memory:')
+        db = sqlite3.connect(":memory:")
         cursor = db.cursor()
 
         # --- Fetch and Store Data ---
         print("Fetching FII payment calendar...")
         fii_payments_df = get_fii_all_payment_data(FIIS_PAYMENT_URL)
         if fii_payments_df.empty:
-             print("Warning: FII payment data is empty. Resulting DataFrame might be incomplete.")
-        fii_payments_df.to_sql('fii_payment_calendar', con=db, index=False, if_exists='replace')
+            print(
+                "Warning: FII payment data is empty. Resulting DataFrame might be incomplete."
+            )
+        fii_payments_df.to_sql(
+            "fii_payment_calendar", con=db, index=False, if_exists="replace"
+        )
         print(f"Stored {len(fii_payments_df)} payment records.")
 
         print("Fetching IFIX composition...")
         ifix_df = get_ifix_data(IFIX_PAGE_URL)
         if ifix_df.empty:
-             print("Warning: IFIX data is empty.")
-        ifix_df.to_sql('fii_ifix_position', con=db, index=False, if_exists='replace')
+            print("Warning: IFIX data is empty.")
+        ifix_df.to_sql("fii_ifix_position", con=db, index=False, if_exists="replace")
         print(f"Stored {len(ifix_df)} IFIX records.")
-
 
         print("Fetching FII DY ranking...")
         ranking_df = get_fii_dy_ranking_data(FIIS_DY_DETAILS_URL)
         if ranking_df.empty:
-             print("Warning: FII DY ranking data is empty.")
-        ranking_df.to_sql('fii_dividend_yeld_ranking', con=db, index=False, if_exists='replace')
+            print("Warning: FII DY ranking data is empty.")
+        ranking_df.to_sql(
+            "fii_dividend_yeld_ranking", con=db, index=False, if_exists="replace"
+        )
         print(f"Stored {len(ranking_df)} ranking records.")
-
 
         # --- Prepare for Indicator Fetching ---
         # Get unique ticker/details pairs from payment data
         fii_info_df = pd.read_sql(
-            "SELECT DISTINCT ticker, details FROM fii_payment_calendar WHERE details IS NOT NULL", con=db
+            "SELECT DISTINCT ticker, details FROM fii_payment_calendar WHERE details IS NOT NULL",
+            con=db,
         )
-        fii_info_df['capture_date'] = CAPTURE_DATE
+        fii_info_df["capture_date"] = CAPTURE_DATE
         # Add sleep parameter placeholder (None initially) for the tuple structure expected by get_fii_indicators
-        fii_info_df['sleep'] = None
+        fii_info_df["sleep"] = None
         fii_info_tuples = tuple(fii_info_df.to_records(index=False))
 
         print(f"Fetching detailed indicators for {len(fii_info_tuples)} unique FIIs...")
@@ -115,56 +136,91 @@ def get_fii_daily_position(parallelize: Optional[bool] = None) -> pd.DataFrame:
         elif len(fii_info_tuples) > 0:
             print("Using sequential processing.")
             for info in fii_info_tuples:
-                indicator_results.append(get_fii_indicators(info)) # type: ignore # Correct tuple structure
+                indicator_results.append(get_fii_indicators(info))  # type: ignore # Correct tuple structure
         else:
             print("No FIIs found to fetch indicators for.")
-
 
         # Filter out None results (errors during fetching/parsing)
         valid_indicators = [d for d in indicator_results if d is not None]
         print(f"Successfully fetched indicators for {len(valid_indicators)} FIIs.")
 
         if not valid_indicators:
-            print("Warning: No valid FII indicators were fetched. Resulting DataFrame will lack indicator data.")
+            print(
+                "Warning: No valid FII indicators were fetched. Resulting DataFrame will lack indicator data."
+            )
             # Create an empty DataFrame with expected columns to avoid SQL errors
-            fii_indicators_df = pd.DataFrame(columns=[
-                'ticker', 'url', 'ref_date', 'price', 'price_date',
-                'fund_name', 'fund_id', 'audience', 'mandate_type', 'segment',
-                'fund_type', 'term_type', 'management_type',
-                'admin_rate', 'vacancy', 'shareholders',
-                'shares', 'equity_by_share', 'equity',
-                'last_payment', 'equity_unit'
-            ])
+            fii_indicators_df = pd.DataFrame(
+                columns=[
+                    "ticker",
+                    "url",
+                    "ref_date",
+                    "price",
+                    "price_date",
+                    "fund_name",
+                    "fund_id",
+                    "audience",
+                    "mandate_type",
+                    "segment",
+                    "fund_type",
+                    "term_type",
+                    "management_type",
+                    "admin_rate",
+                    "vacancy",
+                    "shareholders",
+                    "shares",
+                    "equity_by_share",
+                    "equity",
+                    "last_payment",
+                    "equity_unit",
+                ]
+            )
         else:
             fii_indicators_df = pd.DataFrame.from_dict(valid_indicators)
             # Rename columns to match SQL query expectations
-            fii_indicators_df = fii_indicators_df.rename(columns={
-                'PAPEL': 'ticker',
-                'URL': 'url',
-                'DATA_REFERÊNCIA': 'ref_date',
-                'COTAÇÃO': 'price',
-                'DATA_COTAÇÃO': 'price_date',
-                # Map other keys directly if names match, otherwise add rename rules
-                'NUMERO DE COTISTAS': 'shareholders',
-                'COTAS EMITIDAS': 'shares',
-                'VAL. PATRIMONIAL P/ COTA': 'equity_by_share',
-                'VALOR PATRIMONIAL': 'equity',
-                'VALOR PATRIMONIAL UNIT': 'equity_unit',
-                'ÚLTIMO RENDIMENTO': 'last_payment',
-                'VACÂNCIA': 'vacancy',
-                # Add renames for keys that might differ slightly if needed
-                # 'NOME DO FUNDO': 'fund_name', # Example if key was different
-                # 'CNPJ DO FUNDO': 'fund_id', # Example
-            })
+            fii_indicators_df = fii_indicators_df.rename(
+                columns={
+                    "PAPEL": "ticker",
+                    "URL": "url",
+                    "DATA_REFERÊNCIA": "ref_date",
+                    "COTAÇÃO": "price",
+                    "DATA_COTAÇÃO": "price_date",
+                    # Map other keys directly if names match, otherwise add rename rules
+                    "NUMERO DE COTISTAS": "shareholders",
+                    "COTAS EMITIDAS": "shares",
+                    "VAL. PATRIMONIAL P/ COTA": "equity_by_share",
+                    "VALOR PATRIMONIAL": "equity",
+                    "VALOR PATRIMONIAL UNIT": "equity_unit",
+                    "ÚLTIMO RENDIMENTO": "last_payment",
+                    "VACÂNCIA": "vacancy",
+                    # Add renames for keys that might differ slightly if needed
+                    # 'NOME DO FUNDO': 'fund_name', # Example if key was different
+                    # 'CNPJ DO FUNDO': 'fund_id', # Example
+                }
+            )
 
             # Select and order columns expected by the database table
             expected_indicator_cols = [
-                'ticker', 'url', 'ref_date', 'price', 'price_date',
-                'fund_name', 'fund_id', 'audience', 'mandate_type', 'segment',
-                'fund_type', 'term_type', 'management_type',
-                'admin_rate', 'vacancy', 'shareholders',
-                'shares', 'equity_by_share', 'equity', 'equity_unit',
-                'last_payment'
+                "ticker",
+                "url",
+                "ref_date",
+                "price",
+                "price_date",
+                "fund_name",
+                "fund_id",
+                "audience",
+                "mandate_type",
+                "segment",
+                "fund_type",
+                "term_type",
+                "management_type",
+                "admin_rate",
+                "vacancy",
+                "shareholders",
+                "shares",
+                "equity_by_share",
+                "equity",
+                "equity_unit",
+                "last_payment",
             ]
             # Ensure all expected columns exist, adding missing ones with None
             for col in expected_indicator_cols:
@@ -172,8 +228,9 @@ def get_fii_daily_position(parallelize: Optional[bool] = None) -> pd.DataFrame:
                     fii_indicators_df[col] = None
             fii_indicators_df = fii_indicators_df[expected_indicator_cols]
 
-
-        fii_indicators_df.to_sql('fii_indicators', con=db, index=False, if_exists='replace')
+        fii_indicators_df.to_sql(
+            "fii_indicators", con=db, index=False, if_exists="replace"
+        )
         print(f"Stored {len(fii_indicators_df)} indicator records.")
 
         # --- Create Indexes ---
@@ -182,7 +239,7 @@ def get_fii_daily_position(parallelize: Optional[bool] = None) -> pd.DataFrame:
 
         # --- Final Query ---
         print("Executing final join query...")
-        final_query = f"""
+        final_query = """
             SELECT
                 substr(p.payment_date, 1, 4)       as payment_year,
                 substr(p.payment_date, 1, 7)       as payment_year_month,
@@ -242,51 +299,120 @@ def get_fii_daily_position(parallelize: Optional[bool] = None) -> pd.DataFrame:
         print(f"Generated final DataFrame with {len(result_df)} rows.")
 
         # --- Data Type Conversion for Final DataFrame ---
-        date_cols = ['payment_date', 'com_date', 'price_date', 'reference_date']
+        date_cols = ["payment_date", "com_date", "price_date", "reference_date"]
         for col in date_cols:
             if col in result_df.columns:
-                 result_df[col] = pd.to_datetime(result_df[col], errors='coerce').dt.date
+                result_df[col] = pd.to_datetime(result_df[col], errors="coerce").dt.date
 
         numeric_cols = [
-            'payment', 'price', 'payment_price_ratio', 'ifix_share', 'dy_current', 'p_vp',
-            'daily_liquidity', 'net_worth', 'var_last_12_months', 'vacancy',
-            'shareholders', 'shares', 'equity_by_share', 'equity', 'last_payment'
+            "payment",
+            "price",
+            "payment_price_ratio",
+            "ifix_share",
+            "dy_current",
+            "p_vp",
+            "daily_liquidity",
+            "net_worth",
+            "var_last_12_months",
+            "vacancy",
+            "shareholders",
+            "shares",
+            "equity_by_share",
+            "equity",
+            "last_payment",
         ]
         for col in numeric_cols:
-             if col in result_df.columns:
-                result_df[col] = pd.to_numeric(result_df[col], errors='coerce')
-
+            if col in result_df.columns:
+                result_df[col] = pd.to_numeric(result_df[col], errors="coerce")
 
         return result_df
 
     except (requests.exceptions.RequestException, SystemError, AttributeError) as e:
-         print(f"Error during data fetching or parsing: {e}")
-         # Return empty DataFrame with expected columns if critical error occurs
-         # Define expected columns based on the final SELECT query
-         expected_cols = [
-            'payment_year', 'payment_year_month', 'payment_date', 'com_date', 'ticker', 'name',
-            'fund_name', 'fund_id', 'fund_type', 'segment', 'audience', 'mandate_type', 'term_type',
-            'management_type', 'admin_rate', 'payment', 'price', 'price_date', 'payment_price_ratio',
-            'ifix_share', 'dy_current', 'p_vp', 'daily_liquidity', 'daily_liquidity_unit', 'net_worth',
-            'net_worth_unit', 'var_last_12_months', 'vacancy', 'shareholders', 'shares', 'equity_by_share',
-            'equity', 'equity_unit', 'last_payment', 'reference_date'
-         ]
-         return pd.DataFrame(columns=expected_cols)
+        print(f"Error during data fetching or parsing: {e}")
+        # Return empty DataFrame with expected columns if critical error occurs
+        # Define expected columns based on the final SELECT query
+        expected_cols = [
+            "payment_year",
+            "payment_year_month",
+            "payment_date",
+            "com_date",
+            "ticker",
+            "name",
+            "fund_name",
+            "fund_id",
+            "fund_type",
+            "segment",
+            "audience",
+            "mandate_type",
+            "term_type",
+            "management_type",
+            "admin_rate",
+            "payment",
+            "price",
+            "price_date",
+            "payment_price_ratio",
+            "ifix_share",
+            "dy_current",
+            "p_vp",
+            "daily_liquidity",
+            "daily_liquidity_unit",
+            "net_worth",
+            "net_worth_unit",
+            "var_last_12_months",
+            "vacancy",
+            "shareholders",
+            "shares",
+            "equity_by_share",
+            "equity",
+            "equity_unit",
+            "last_payment",
+            "reference_date",
+        ]
+        return pd.DataFrame(columns=expected_cols)
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         # Consider returning empty DF here as well
-        expected_cols = [ # Duplicated for clarity in error handling
-            'payment_year', 'payment_year_month', 'payment_date', 'com_date', 'ticker', 'name',
-            'fund_name', 'fund_id', 'fund_type', 'segment', 'audience', 'mandate_type', 'term_type',
-            'management_type', 'admin_rate', 'payment', 'price', 'price_date', 'payment_price_ratio',
-            'ifix_share', 'dy_current', 'p_vp', 'daily_liquidity', 'daily_liquidity_unit', 'net_worth',
-            'net_worth_unit', 'var_last_12_months', 'vacancy', 'shareholders', 'shares', 'equity_by_share',
-            'equity', 'equity_unit', 'last_payment', 'reference_date'
-         ]
+        expected_cols = [  # Duplicated for clarity in error handling
+            "payment_year",
+            "payment_year_month",
+            "payment_date",
+            "com_date",
+            "ticker",
+            "name",
+            "fund_name",
+            "fund_id",
+            "fund_type",
+            "segment",
+            "audience",
+            "mandate_type",
+            "term_type",
+            "management_type",
+            "admin_rate",
+            "payment",
+            "price",
+            "price_date",
+            "payment_price_ratio",
+            "ifix_share",
+            "dy_current",
+            "p_vp",
+            "daily_liquidity",
+            "daily_liquidity_unit",
+            "net_worth",
+            "net_worth_unit",
+            "var_last_12_months",
+            "vacancy",
+            "shareholders",
+            "shares",
+            "equity_by_share",
+            "equity",
+            "equity_unit",
+            "last_payment",
+            "reference_date",
+        ]
         return pd.DataFrame(columns=expected_cols)
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        raise # Re-raise unexpected errors
+        raise  # Re-raise unexpected errors
     finally:
         if db:
             db.close()

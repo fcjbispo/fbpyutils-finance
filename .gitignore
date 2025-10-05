@@ -8,3 +8,5 @@
 **/__pycache__/*
 **/__marimo__/*
 **/.sandbox.*
+**/.ruff*
+**/.comment

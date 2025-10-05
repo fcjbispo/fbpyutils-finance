@@ -6,11 +6,6 @@ import os
 import sys
 import pytest
 import pandas as pd
-from unittest.mock import patch, MagicMock
-
-# Add project root to path to allow importing fbpyutils_finance
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, project_root)
 
 # Import functions from the __init__ module
 from fbpyutils_finance import (
@@ -26,8 +21,13 @@ from fbpyutils_finance import (
     stock_adjusted_return_rate_check,
     stock_event_factor,
     get_investment_table,
-    USER_APP_FOLDER # Import to test its creation logic
+    USER_CVM_DIR # Import to test its creation logic
 )
+
+# Add project root to path to allow importing fbpyutils_finance
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
+
 
 # --- Constants for Tests ---
 PRECISION = 1e-9 # Define precision for float comparisons
@@ -491,7 +491,7 @@ def test_get_investment_table_single_asset(sample_dataframe):
     assert abs(result_df['Profit/Loss'].iloc[0] - 100.0) < PRECISION
 
 
-# --- Tests for USER_APP_FOLDER creation ---
+# --- Tests for USER_CVM_DIR creation ---
 
 # We need to reload the module under test within the patch context
 # to ensure the patched functions are used during the module's import-time execution.
@@ -501,27 +501,27 @@ def test_get_investment_table_single_asset(sample_dataframe):
 
 @patch('os.makedirs')
 @patch('os.path.exists')
-def test_user_app_folder_creation_if_not_exists(mock_exists, mock_makedirs):
-    """Test that os.makedirs is called if USER_APP_FOLDER does not exist."""
+def test_USER_CVM_DIR_creation_if_not_exists(mock_exists, mock_makedirs):
+    """Test that os.makedirs is called if USER_CVM_DIR does not exist."""
     mock_exists.return_value = False # Simulate folder does not exist
 
     # Re-import or re-run the specific lines from __init__.py under patch
     # Option 1: Re-run the logic directly (safer)
-    if not os.path.exists(USER_APP_FOLDER):
-        os.makedirs(USER_APP_FOLDER)
+    if not os.path.exists(USER_CVM_DIR):
+        os.makedirs(USER_CVM_DIR)
 
-    mock_exists.assert_called_once_with(USER_APP_FOLDER)
-    mock_makedirs.assert_called_once_with(USER_APP_FOLDER)
+    mock_exists.assert_called_once_with(USER_CVM_DIR)
+    mock_makedirs.assert_called_once_with(USER_CVM_DIR)
 
 @patch('os.makedirs')
 @patch('os.path.exists')
-def test_user_app_folder_creation_if_exists(mock_exists, mock_makedirs):
-    """Test that os.makedirs is NOT called if USER_APP_FOLDER already exists."""
+def test_USER_CVM_DIR_creation_if_exists(mock_exists, mock_makedirs):
+    """Test that os.makedirs is NOT called if USER_CVM_DIR already exists."""
     mock_exists.return_value = True # Simulate folder exists
 
     # Re-run the logic directly
-    if not os.path.exists(USER_APP_FOLDER):
-        os.makedirs(USER_APP_FOLDER) # This line shouldn't execute
+    if not os.path.exists(USER_CVM_DIR):
+        os.makedirs(USER_CVM_DIR) # This line shouldn't execute
 
-    mock_exists.assert_called_once_with(USER_APP_FOLDER)
+    mock_exists.assert_called_once_with(USER_CVM_DIR)
     mock_makedirs.assert_not_called() # Ensure makedirs was not called

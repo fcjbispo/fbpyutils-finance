@@ -1,18 +1,22 @@
 import sqlite3
 import pandas as pd
-import re # Added import re
-from typing import List, Dict, Tuple, Callable, Any, Optional
+import re  # Added import re
+from typing import List, Dict, Tuple, Callable, Any
 
 from fbpyutils.debug import debug_info
 from .utils import is_nan_or_empty
+
 # Import specific converters if they are defined elsewhere (e.g., in converters.py)
 # This assumes converters like as_int, as_float are available in the scope where eval is called
 # or are explicitly imported/defined. For safety, explicitly import them if needed.
-from .converters import * # Import all from converters
+from .converters import *  # Import all from converters
 
 # --- Funções de Processamento de Dados ---
 
-def get_expression_and_converters(mappings: List[Dict[str, Any]]) -> Tuple[List[str], Dict[str, Callable]]:
+
+def get_expression_and_converters(
+    mappings: List[Dict[str, Any]],
+) -> Tuple[List[str], Dict[str, Callable]]:
     """
     Generates SQL expressions and a dictionary of converter functions based on header mappings.
 
@@ -31,9 +35,9 @@ def get_expression_and_converters(mappings: List[Dict[str, Any]]) -> Tuple[List[
     converters = {}
 
     for m in mappings:
-        target_field = m.get('Target_Field')
-        source_field = m.get('Source_Field')
-        converter_str = m.get('Converter')
+        target_field = m.get("Target_Field")
+        source_field = m.get("Source_Field")
+        converter_str = m.get("Converter")
 
         # Skip if target field is missing
         if not target_field:
@@ -42,22 +46,27 @@ def get_expression_and_converters(mappings: List[Dict[str, Any]]) -> Tuple[List[
         target_field_lower = target_field.lower()
 
         # Build SQL expression
-        expression = 'NULL' # Default if no source field
+        expression = "NULL"  # Default if no source field
         if not is_nan_or_empty(source_field):
             # Ensure source field name is safe for SQL (basic quoting)
             # A more robust solution might involve checking for actual SQL keywords/injection
             # Assuming source field names from CVM files are generally safe or handled by pandas/sqlite
-            safe_source_field = f'"{source_field.lower()}"' # Use lowercase and quote
+            safe_source_field = f'"{source_field.lower()}"'  # Use lowercase and quote
             expression = safe_source_field
             # Apply transformations sequentially
-            for transform_key in ['Transformation1', 'Transformation2', 'Transformation3']:
+            for transform_key in [
+                "Transformation1",
+                "Transformation2",
+                "Transformation3",
+            ]:
                 transformation = m.get(transform_key)
                 if not is_nan_or_empty(transformation):
                     # Replace placeholder $X (case-insensitive) with the current expression
                     # Use regex for safer replacement to avoid partial matches if $X appears within names
                     # expression = transformation.replace('$X', expression) # Simple replacement
-                    expression = re.sub(r'\$X', expression, transformation, flags=re.IGNORECASE)
-
+                    expression = re.sub(
+                        r"\$X", expression, transformation, flags=re.IGNORECASE
+                    )
 
         expressions.append(f"{expression} AS {target_field_lower}")
 
@@ -68,17 +77,23 @@ def get_expression_and_converters(mappings: List[Dict[str, Any]]) -> Tuple[List[
                 # WARNING: eval() is a security risk if converter strings come from untrusted sources.
                 # Ensure HEADER_MAPPINGS_FILE is secure and manually curated.
                 # Using imported converters module scope for eval.
-                converter_func = eval(converter_str, globals(), locals()) # Provide scope
+                converter_func = eval(
+                    converter_str, globals(), locals()
+                )  # Provide scope
                 if not callable(converter_func):
-                     raise TypeError(f"Converter string '{converter_str}' did not evaluate to a callable function.")
+                    raise TypeError(
+                        f"Converter string '{converter_str}' did not evaluate to a callable function."
+                    )
                 converters[target_field_lower] = converter_func
             except Exception as e:
-                print(f"Warning: Could not evaluate converter '{converter_str}' for field '{target_field}'. Using default (identity). Error: {e}")
+                print(
+                    f"Warning: Could not evaluate converter '{converter_str}' for field '{target_field}'. Using default (identity). Error: {e}"
+                )
                 # Fallback to a function that returns the original value
-                converters[target_field_lower] = lambda x: x # Identity function
+                converters[target_field_lower] = lambda x: x  # Identity function
         else:
             # If no converter specified, use identity function
-            converters[target_field_lower] = lambda x: x # Identity function
+            converters[target_field_lower] = lambda x: x  # Identity function
 
     return expressions, converters
 
@@ -99,44 +114,51 @@ def apply_expressions(data: pd.DataFrame, expressions: List[str]) -> pd.DataFram
         ValueError: If applying expressions fails.
         sqlite3.Error: If database operations fail.
     """
-    query = "" # Initialize query string for error reporting
+    query = ""  # Initialize query string for error reporting
     if data.empty:
-        print("Warning: Input DataFrame is empty in apply_expressions. Returning empty DataFrame.")
+        print(
+            "Warning: Input DataFrame is empty in apply_expressions. Returning empty DataFrame."
+        )
         # Try to determine columns from expressions if possible
         expected_cols = []
         for expr in expressions:
-             # Regex to find 'AS alias' part, handling potential spaces and case
-             match = re.search(r"AS\s+([\w\"\'\[\`]+)", expr, re.IGNORECASE)
-             if match:
-                 # Clean up potential quotes from alias
-                 col_name = match.group(1).strip("\"'[]`")
-                 expected_cols.append(col_name)
+            # Regex to find 'AS alias' part, handling potential spaces and case
+            match = re.search(r"AS\s+([\w\"\'\[\`]+)", expr, re.IGNORECASE)
+            if match:
+                # Clean up potential quotes from alias
+                col_name = match.group(1).strip("\"'[]`")
+                expected_cols.append(col_name)
         return pd.DataFrame(columns=expected_cols)
-
 
     # Ensure column names are lowercase before inserting into SQLite
     data.columns = [c.lower() for c in data.columns]
 
-    STAGE = sqlite3.connect(':memory:')
+    STAGE = sqlite3.connect(":memory:")
     try:
         # Use chunking for potentially large DataFrames to manage memory
-        chunksize = 100000 # Adjust as needed
-        data.to_sql('if_data', con=STAGE, if_exists='replace', index=False, chunksize=chunksize)
+        chunksize = 100000  # Adjust as needed
+        data.to_sql(
+            "if_data", con=STAGE, if_exists="replace", index=False, chunksize=chunksize
+        )
 
-        query = f'SELECT {", ".join(expressions)} FROM if_data'
+        query = f"SELECT {', '.join(expressions)} FROM if_data"
         # print(f"Executing SQL: {query}") # Optional: for debugging
         result_df = pd.read_sql(query, con=STAGE)
         return result_df
     except (sqlite3.Error, pd.io.sql.DatabaseError, ValueError) as e:
         info = debug_info(e)
         # Try to provide more context in the error
-        raise ValueError(f"Failed to apply expressions via SQLite: {e} ({info}). Query: {query[:500]}...")
+        raise ValueError(
+            f"Failed to apply expressions via SQLite: {e} ({info}). Query: {query[:500]}..."
+        )
     finally:
         if STAGE:
             STAGE.close()
 
 
-def apply_converters(data: pd.DataFrame, converters: Dict[str, Callable]) -> pd.DataFrame:
+def apply_converters(
+    data: pd.DataFrame, converters: Dict[str, Callable]
+) -> pd.DataFrame:
     """
     Applies converter functions to the columns of a DataFrame.
 
@@ -152,10 +174,12 @@ def apply_converters(data: pd.DataFrame, converters: Dict[str, Callable]) -> pd.
         ValueError: If applying a converter fails for a column.
     """
     if data.empty:
-        print("Warning: Input DataFrame is empty in apply_converters. Returning empty DataFrame.")
+        print(
+            "Warning: Input DataFrame is empty in apply_converters. Returning empty DataFrame."
+        )
         return data
 
-    converted_data = data.copy() # Work on a copy
+    converted_data = data.copy()  # Work on a copy
 
     for col_name, converter_func in converters.items():
         if col_name in converted_data.columns:
@@ -171,10 +195,11 @@ def apply_converters(data: pd.DataFrame, converters: Dict[str, Callable]) -> pd.
             except Exception as e:
                 info = debug_info(e)
                 # Provide more context about the failing column and converter
-                raise ValueError(f"Converter error applying '{getattr(converter_func, '__name__', 'lambda')}' to column '{col_name}': {e} ({info})")
+                raise ValueError(
+                    f"Converter error applying '{getattr(converter_func, '__name__', 'lambda')}' to column '{col_name}': {e} ({info})"
+                )
         # else: # Optional: Warn if a converter is defined for a non-existent column
-             # print(f"Warning: Converter defined for non-existent column '{col_name}'.")
-
+        # print(f"Warning: Converter defined for non-existent column '{col_name}'.")
 
     # Replace pandas NaNs/NaTs with Python None for database compatibility or general use
     # Using fillna(None) can be tricky with mixed types or non-nullable types.
@@ -186,14 +211,22 @@ def apply_converters(data: pd.DataFrame, converters: Dict[str, Callable]) -> pd.
             # Check if column has NA values to avoid unnecessary operations
             if converted_data[col].isnull().any():
                 # Use appropriate NA representation or None
-                if pd.api.types.is_integer_dtype(converted_data[col].dtype) and not hasattr(converted_data[col].dtype, 'na_value'):
+                if pd.api.types.is_integer_dtype(
+                    converted_data[col].dtype
+                ) and not hasattr(converted_data[col].dtype, "na_value"):
                     # Standard int dtypes don't support None, convert to float or object if NAs exist
                     # Or use pandas nullable Int64Dtype if appropriate upstream
                     # For now, convert to object to allow None
-                    converted_data[col] = converted_data[col].astype(object).fillna(value=None)
-                elif pd.api.types.is_bool_dtype(converted_data[col].dtype) and not hasattr(converted_data[col].dtype, 'na_value'):
-                     # Standard bool dtype doesn't support None
-                     converted_data[col] = converted_data[col].astype(object).fillna(value=None)
+                    converted_data[col] = (
+                        converted_data[col].astype(object).fillna(value=None)
+                    )
+                elif pd.api.types.is_bool_dtype(
+                    converted_data[col].dtype
+                ) and not hasattr(converted_data[col].dtype, "na_value"):
+                    # Standard bool dtype doesn't support None
+                    converted_data[col] = (
+                        converted_data[col].astype(object).fillna(value=None)
+                    )
                 else:
                     # For float, datetime, timedelta, string, object, and nullable dtypes, fillna(None) should work
                     # Note: fillna(None) might convert nullable Int to float if None is introduced.
@@ -202,7 +235,8 @@ def apply_converters(data: pd.DataFrame, converters: Dict[str, Callable]) -> pd.
                     converted_data[col] = converted_data[col].fillna(value=None)
 
     except Exception as fill_e:
-         print(f"Warning: Error during final NA -> None conversion: {fill_e}. Returning data with potential NAs.")
-
+        print(
+            f"Warning: Error during final NA -> None conversion: {fill_e}. Returning data with potential NAs."
+        )
 
     return converted_data

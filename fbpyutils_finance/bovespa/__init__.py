@@ -1,17 +1,18 @@
-'''
+"""
 Data Providers: BOVESPA Package.
-'''
+"""
+
 import os
 import requests
 import pandas as pd
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, Optional, Tuple # Added date, Optional, Tuple, Dict, Any
+from typing import Any, Dict, Optional, Tuple  # Added date, Optional, Tuple, Dict, Any
 
 import fbpyutils_finance as FI
 from fbpyutils import file as F, xlsx as XL
 
 
-_bvmf_cert=FI.CERTIFICATES['bvmf-bmfbovespa-com-br']
+_bvmf_cert = FI.CERTIFICATES["bvmf-bmfbovespa-com-br"]
 
 
 class FetchModes:
@@ -24,13 +25,14 @@ class FetchModes:
         LOCAL_OR_DOWNLOAD (int): Try local storage first, then download if not found or invalid.
         STREAM (int): Fetch data as a stream (currently used similarly to DOWNLOAD).
     """
+
     LOCAL = 0
     DOWNLOAD = 1
     LOCAL_OR_DOWNLOAD = 2
     STREAM = 3
 
 
-class StockHistory():
+class StockHistory:
     """
     Fetches and processes historical stock data (COTAHIST) from the B3 website (formerly BOVESPA).
 
@@ -43,6 +45,7 @@ class StockHistory():
         download_folder (str): The directory where downloaded COTAHIST ZIP files
                                are stored and read from.
     """
+
     _col_widths = [
         2,
         8,
@@ -69,136 +72,135 @@ class StockHistory():
         7,
         13,
         12,
-        3
+        3,
     ]
 
     _col_names = [
-        'record_type',
-        'trade_date',
-        'bdi_code',
-        'ticker',
-        'market_type',
-        'ticker_issuer',
-        'ticker_specs',
-        'term_days',
-        'currency',
-        'open_value',
-        'max_value',
-        'min_value',
-        'average_value',
-        'close_value',
-        'best_buy_offer',
-        'best_sell_offer',
-        'total_trades',
-        'total_trades_papers',
-        'total_trades_value',
-        'option_market_current_price',
-        'option_market_current_price_adjustment_indicator',
-        'option_market_due_date',
-        'ticker_trade_factor',
-        'option_market_current_price_in_points',
-        'ticker_isin_code',
-        'ticker_distribution_number'
+        "record_type",
+        "trade_date",
+        "bdi_code",
+        "ticker",
+        "market_type",
+        "ticker_issuer",
+        "ticker_specs",
+        "term_days",
+        "currency",
+        "open_value",
+        "max_value",
+        "min_value",
+        "average_value",
+        "close_value",
+        "best_buy_offer",
+        "best_sell_offer",
+        "total_trades",
+        "total_trades_papers",
+        "total_trades_value",
+        "option_market_current_price",
+        "option_market_current_price_adjustment_indicator",
+        "option_market_due_date",
+        "ticker_trade_factor",
+        "option_market_current_price_in_points",
+        "ticker_isin_code",
+        "ticker_distribution_number",
     ]
 
     _converters = {
-        'record_type': lambda x: str(int(x)),
-        'trade_date': lambda x: str(x),
-        'bdi_code': lambda x: str(x),
-        'ticker': lambda x: str(x),
-        'market_type': lambda x: str(int(x)),
-        'ticker_issuer': lambda x: str(x),
-        'ticker_specs': lambda x: str(x),
-        'term_days': lambda x: str(x),
-        'currency': lambda x: str(x),
-        'open_value': lambda x: str(int(x)),
-        'max_value': lambda x: str(int(x)),
-        'min_value': lambda x: str(int(x)),
-        'average_value': lambda x: str(int(x)),
-        'close_value': lambda x: str(int(x)),
-        'best_buy_offer': lambda x: str(int(x)),
-        'best_sell_offer': lambda x: str(int(x)),
-        'total_trades': lambda x: str(int(x)),
-        'total_trades_papers': lambda x: str(int(x)),
-        'total_trades_value': lambda x: str(int(x)),
-        'option_market_current_price': lambda x: str(int(x)),
-        'option_market_current_price_adjustment_indicator': lambda x: str(int(x)),
-        'option_market_due_date': lambda x: str(int(x)),
-        'ticker_trade_factor': lambda x: str(int(x)),
-        'option_market_current_price_in_points': lambda x: str(int(x)),
-        'ticker_isin_code': lambda x: str(x),
-        'ticker_distribution_number': lambda x: str(x)
+        "record_type": lambda x: str(int(x)),
+        "trade_date": lambda x: str(x),
+        "bdi_code": lambda x: str(x),
+        "ticker": lambda x: str(x),
+        "market_type": lambda x: str(int(x)),
+        "ticker_issuer": lambda x: str(x),
+        "ticker_specs": lambda x: str(x),
+        "term_days": lambda x: str(x),
+        "currency": lambda x: str(x),
+        "open_value": lambda x: str(int(x)),
+        "max_value": lambda x: str(int(x)),
+        "min_value": lambda x: str(int(x)),
+        "average_value": lambda x: str(int(x)),
+        "close_value": lambda x: str(int(x)),
+        "best_buy_offer": lambda x: str(int(x)),
+        "best_sell_offer": lambda x: str(int(x)),
+        "total_trades": lambda x: str(int(x)),
+        "total_trades_papers": lambda x: str(int(x)),
+        "total_trades_value": lambda x: str(int(x)),
+        "option_market_current_price": lambda x: str(int(x)),
+        "option_market_current_price_adjustment_indicator": lambda x: str(int(x)),
+        "option_market_due_date": lambda x: str(int(x)),
+        "ticker_trade_factor": lambda x: str(int(x)),
+        "option_market_current_price_in_points": lambda x: str(int(x)),
+        "ticker_isin_code": lambda x: str(x),
+        "ticker_distribution_number": lambda x: str(x),
     }
 
     _data_columns = [
-        'trade_date',
-        'bdi_code',
-        'market_type',
-        'ticker',
-        'ticker_issuer',
-        'ticker_specs',
-        'ticker_isin_code',
-        'term_days',
-        'currency',
-        'open_value',
-        'min_value',
-        'max_value',
-        'average_value',
-        'close_value',
-        'total_trades',
-        'total_trades_papers',
-        'total_trades_value'
+        "trade_date",
+        "bdi_code",
+        "market_type",
+        "ticker",
+        "ticker_issuer",
+        "ticker_specs",
+        "ticker_isin_code",
+        "term_days",
+        "currency",
+        "open_value",
+        "min_value",
+        "max_value",
+        "average_value",
+        "close_value",
+        "total_trades",
+        "total_trades_papers",
+        "total_trades_value",
     ]
 
     _original_col_names = [
-        'tipreg',
-        'datpre',
-        'codbdi',
-        'codneg',
-        'tpmerc',
-        'nomres',
-        'especi',
-        'prazot',
-        'modref',
-        'preabe',
-        'premax',
-        'premin',
-        'premed',
-        'preult',
-        'preofc',
-        'preofv',
-        'totneg',
-        'quatot',
-        'voltot',
-        'preexe',
-        'indopc',
-        'datven',
-        'fatcot',
-        'ptoexe',
-        'codisi',
-        'dismes'
+        "tipreg",
+        "datpre",
+        "codbdi",
+        "codneg",
+        "tpmerc",
+        "nomres",
+        "especi",
+        "prazot",
+        "modref",
+        "preabe",
+        "premax",
+        "premin",
+        "premed",
+        "preult",
+        "preofc",
+        "preofv",
+        "totneg",
+        "quatot",
+        "voltot",
+        "preexe",
+        "indopc",
+        "datven",
+        "fatcot",
+        "ptoexe",
+        "codisi",
+        "dismes",
     ]
 
     _original_data_columns = [
-        'datpre',
-        'codbdi',
-        'tpmerc',
-        'codneg',
-        'nomres',
-        'especi',
-        'codisi',
-        'prazot',
-        'modref',
-        'preabe',
-        'premin',
-        'premax',
-        'premed',
-        'preult',
-        'totneg',
-        'quatot',
-        'voltot'
+        "datpre",
+        "codbdi",
+        "tpmerc",
+        "codneg",
+        "nomres",
+        "especi",
+        "codisi",
+        "prazot",
+        "modref",
+        "preabe",
+        "premin",
+        "premax",
+        "premed",
+        "preult",
+        "totneg",
+        "quatot",
+        "voltot",
     ]
-
 
     @staticmethod
     def validate_period_date(period_date: str) -> bool:
@@ -214,19 +216,21 @@ class StockHistory():
         Raises:
             ValueError: If the string does not match any supported format.
         """
-        formats = ['%Y%m', '%Y%m%d']  # Supported date formats
+        formats = ["%Y%m", "%Y%m%d"]  # Supported date formats
 
         for date_format in formats:
             try:
                 datetime.strptime(period_date, date_format)
                 # Check if the parsed date string matches the original format
-                if datetime.strptime(period_date, date_format).strftime(date_format) == period_date:
+                if (
+                    datetime.strptime(period_date, date_format).strftime(date_format)
+                    == period_date
+                ):
                     return True  # Date is valid and matches format
             except ValueError:
                 pass
 
         raise ValueError("Invalid date format or value: " + period_date)
-
 
     @staticmethod
     def to_float(x: Any) -> float:
@@ -239,11 +243,16 @@ class StockHistory():
         Returns:
             float: The converted float value.
         """
-        return 0.0 if type(x) == str and not x else float('.'.join([x[0:-2], x[-2:]])) if type(x) == str else float(x)
-
+        return (
+            0.0
+            if type(x) == str and not x
+            else float(".".join([x[0:-2], x[-2:]]))
+            if type(x) == str
+            else float(x)
+        )
 
     @staticmethod
-    def to_date(x: Any, format: str = '%Y%m%d') -> Optional[date]:
+    def to_date(x: Any, format: str = "%Y%m%d") -> Optional[date]:
         """
         Converts a value to a date object using pandas.to_datetime.
 
@@ -254,7 +263,7 @@ class StockHistory():
         Returns:
             Optional[date]: The converted date object, or None if conversion fails ('ignore' errors).
         """
-        result = pd.to_datetime(x, format=format, errors='ignore')
+        result = pd.to_datetime(x, format=format, errors="ignore")
         if isinstance(result, str):
             return None
         if pd.isna(result):  # Check for NaT
@@ -275,29 +284,37 @@ class StockHistory():
                             Example: {'status': 'OK', 'tables': {'bdi_codes': DataFrame, ...}, 'message': '...'}
                             On error: {'status': 'ERROR', 'message': '...'}
         """
-        info_tables_path = os.path.join(FI.APP_FOLDER, 'bovespa', 'tabelas_anexas_bovespa.xlsx')
-        response: Dict[str, Any] = {'status': 'OK', 'tables': {}, 'message': ''}
+        info_tables_path = os.path.join(
+            FI._ROOT_DIR, "bovespa", "tabelas_anexas_bovespa.xlsx"
+        )
+        response: Dict[str, Any] = {"status": "OK", "tables": {}, "message": ""}
         try:
             # Assuming XL.ExcelWorkbook and read_sheet are defined elsewhere in fbpyutils
             info_tables = XL.ExcelWorkbook(info_tables_path)
-            response['tables'] = {}
-            sheet_names = XL.get_sheet_names(info_tables_path) # Use get_sheet_names function
-            for sheet in sheet_names: # Iterate through sheet_names
+            response["tables"] = {}
+            sheet_names = XL.get_sheet_names(
+                info_tables_path
+            )  # Use get_sheet_names function
+            for sheet in sheet_names:  # Iterate through sheet_names
                 # Assuming read_sheet returns a tuple/list of lists/tuples
                 info_data = tuple(info_tables.read_sheet(sheet))
                 if info_data and len(info_data) > 0:
-                    response['tables'][sheet] = pd.DataFrame(
+                    response["tables"][sheet] = pd.DataFrame(
                         info_data[1:],
-                        columns=[str(c).lower() for c in info_data[0]] # Ensure columns are strings
+                        columns=[
+                            str(c).lower() for c in info_data[0]
+                        ],  # Ensure columns are strings
                     )
                 else:
-                     response['tables'][sheet] = pd.DataFrame() # Handle empty sheets
-            response['message'] = f'All {len(sheet_names)} sheets fetched.' # Use sheet_names variable
+                    response["tables"][sheet] = pd.DataFrame()  # Handle empty sheets
+            response["message"] = (
+                f"All {len(sheet_names)} sheets fetched."  # Use sheet_names variable
+            )
             return response
         except Exception as e:
-            response['status'] = 'ERROR'
-            response['message'] = f'Error fetching bovespa info tables: {str(e)}'
-            response.pop('tables', None) # Remove tables key on error
+            response["status"] = "ERROR"
+            response["message"] = f"Error fetching bovespa info tables: {str(e)}"
+            response.pop("tables", None)  # Remove tables key on error
             return response
 
     def __init__(self, download_folder: Optional[str] = None) -> None:
@@ -313,18 +330,19 @@ class StockHistory():
             OSError: If the specified download_folder does not exist or is not a directory.
         """
         if download_folder is None or len(download_folder) == 0:
-            download_folder = os.path.expanduser('~')
+            download_folder = os.path.expanduser("~")
 
         if not os.path.exists(download_folder):
-            raise OSError('Path doesn\'t exists.')
+            raise OSError("Path doesn't exists.")
 
         if not os.path.isdir(download_folder):
-            raise OSError('Path is not a folder.')
+            raise OSError("Path is not a folder.")
 
         self.download_folder = download_folder
 
-
-    def _build_paths(self, period: str = 'A', period_date: Optional[str] = None) -> Tuple[str, str]:
+    def _build_paths(
+        self, period: str = "A", period_date: Optional[str] = None
+    ) -> Tuple[str, str]:
         """
         Constructs the download URL and local file path for a COTAHIST file.
 
@@ -344,32 +362,33 @@ class StockHistory():
         Raises:
             ValueError: If the period is invalid or period_date format is incorrect.
         """
-        period = period or 'A'
+        period = period or "A"
 
-        if period is None or period not in ['A', 'M', 'D']:
-            raise ValueError('Invalid period. User A, M or D.')
-        
+        if period is None or period not in ["A", "M", "D"]:
+            raise ValueError("Invalid period. User A, M or D.")
+
         if period_date:
             self.validate_period_date(period_date=period_date)
 
-        if period == 'A':
-            period_date = period_date or datetime.today().strftime('%Y')
-        elif period == 'M':
-            period_date = period_date or datetime.today().strftime('%m%Y')
+        if period == "A":
+            period_date = period_date or datetime.today().strftime("%Y")
+        elif period == "M":
+            period_date = period_date or datetime.today().strftime("%m%Y")
         else:
             yesterday = datetime.today() - timedelta(days=1)
-            period_date = period_date or yesterday.strftime('%d%m%Y')
+            period_date = period_date or yesterday.strftime("%d%m%Y")
 
-        cotfile = 'COTAHIST_' + period + period_date + '.ZIP'
+        cotfile = "COTAHIST_" + period + period_date + ".ZIP"
 
-        url = 'https://bvmf.bmfbovespa.com.br/InstDados/SerHist/' + cotfile
+        url = "https://bvmf.bmfbovespa.com.br/InstDados/SerHist/" + cotfile
 
         output_file = os.path.sep.join([self.download_folder, cotfile])
 
         return url, output_file
 
-
-    def _download_stock_history(self, period: str = 'A', period_data: Optional[str] = None) -> str:
+    def _download_stock_history(
+        self, period: str = "A", period_data: Optional[str] = None
+    ) -> str:
         """
         Downloads a COTAHIST ZIP file for the specified period.
 
@@ -397,8 +416,9 @@ class StockHistory():
 
         return output_file
 
-
-    def _treat_data(self, data: pd.DataFrame, original_names: bool, compact: bool) -> pd.DataFrame:
+    def _treat_data(
+        self, data: pd.DataFrame, original_names: bool, compact: bool
+    ) -> pd.DataFrame:
         """
         Processes the raw DataFrame read from the COTAHIST file.
 
@@ -415,16 +435,19 @@ class StockHistory():
         Returns:
             pd.DataFrame: The processed DataFrame.
         """
-        cot_data = data[data['record_type'] == '1'].copy(deep=True)
+        cot_data = data[data["record_type"] == "1"].copy(deep=True)
 
         for col in [
-            'open_value', 'min_value', 'max_value', 'average_value',
-            'close_value', 'total_trades_value'
+            "open_value",
+            "min_value",
+            "max_value",
+            "average_value",
+            "close_value",
+            "total_trades_value",
         ]:
             cot_data[col] = cot_data[col].apply(StockHistory.to_float)
 
-        cot_data['trade_date'] = cot_data['trade_date'].apply(
-            StockHistory.to_date)
+        cot_data["trade_date"] = cot_data["trade_date"].apply(StockHistory.to_date)
 
         cot_data = cot_data.fillna(0)
 
@@ -440,8 +463,9 @@ class StockHistory():
             else:
                 return cot_data
 
-
-    def _check_local_history(self, period: str = 'A', period_data: Optional[str] = None) -> bool:
+    def _check_local_history(
+        self, period: str = "A", period_data: Optional[str] = None
+    ) -> bool:
         """
         Checks if a valid COTAHIST ZIP file exists locally for the given period.
 
@@ -455,16 +479,18 @@ class StockHistory():
         _, local_file = self._build_paths(period, period_data)
 
         return (
-            os.path.exists(local_file) and
-            os.path.isfile(local_file) and
-            F.mime_type(local_file) == 'application/zip'
+            os.path.exists(local_file)
+            and os.path.isfile(local_file)
+            and F.mime_type(local_file) == "application/zip"
         )
 
-
     def get_stock_history(
-        self, period: str = 'A', period_data: Optional[str] = None,
+        self,
+        period: str = "A",
+        period_data: Optional[str] = None,
         fetch_mode: int = FetchModes.LOCAL_OR_DOWNLOAD,
-        compact: bool = True, original_names: bool = False
+        compact: bool = True,
+        original_names: bool = False,
     ) -> pd.DataFrame:
         """
         Fetches, parses, and processes B3 historical stock data (COTAHIST).
@@ -487,10 +513,12 @@ class StockHistory():
             Exception: For errors during file reading or processing.
         """
         if fetch_mode not in [
-            FetchModes.LOCAL, FetchModes.DOWNLOAD, FetchModes.LOCAL_OR_DOWNLOAD,
-            FetchModes.STREAM
+            FetchModes.LOCAL,
+            FetchModes.DOWNLOAD,
+            FetchModes.LOCAL_OR_DOWNLOAD,
+            FetchModes.STREAM,
         ]:
-            raise ValueError('Invalid fetch mode.')
+            raise ValueError("Invalid fetch mode.")
 
         if fetch_mode == FetchModes.LOCAL_OR_DOWNLOAD:
             if self._check_local_history(period, period_data):
@@ -505,21 +533,26 @@ class StockHistory():
             if self._check_local_history(period, period_data):
                 _, data_file = self._build_paths(period, period_data)
             else:
-                raise OSError('Invalid or non existent local file.')
+                raise OSError("Invalid or non existent local file.")
 
         if fetch_mode == FetchModes.STREAM:
             data_file, _ = self._build_paths(period, period_data)
 
         cot = None
-        encoding_list = ['ISO-8859-1', 'cp1252', 'latin', 'utf-8']
+        encoding_list = ["ISO-8859-1", "cp1252", "latin", "utf-8"]
         while cot is None and len(encoding_list) > 0:
             encoding = encoding_list.pop()
             try:
                 cot = pd.read_fwf(
-                    data_file, header=None, compression='zip', widths=self._col_widths,
-                    names=self._col_names, converters=self._converters, encoding=encoding
+                    data_file,
+                    header=None,
+                    compression="zip",
+                    widths=self._col_widths,
+                    names=self._col_names,
+                    converters=self._converters,
+                    encoding=encoding,
                 )
-            except UnicodeDecodeError as e:
+            except UnicodeDecodeError:
                 cot = None
 
         if cot is None:
@@ -527,7 +560,6 @@ class StockHistory():
             raise RuntimeError("Error reading stock history file. Unknown encoding.")
 
         if type(cot) != pd.core.frame.DataFrame:
-            raise TypeError(
-                'Failed to get the stock history. Invalid output data.')
+            raise TypeError("Failed to get the stock history. Invalid output data.")
 
         return self._treat_data(cot, original_names, compact)

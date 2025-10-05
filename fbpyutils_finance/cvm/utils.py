@@ -6,7 +6,10 @@ from fbpyutils import string as SU
 
 # --- Funções Utilitárias ---
 
-def get_value_by_index_if_exists(data_list: list, index: int, default: Optional[Any] = None) -> Optional[Any]:
+
+def get_value_by_index_if_exists(
+    data_list: list, index: int, default: Optional[Any] = None
+) -> Optional[Any]:
     """
     Returns the value at a specific index in a list if it exists, otherwise returns a default value.
 
@@ -21,7 +24,10 @@ def get_value_by_index_if_exists(data_list: list, index: int, default: Optional[
     """
     return data_list[index] if len(data_list) > index else default
 
-def make_number_type(value: Optional[str], num_type: Type[Union[int, float]] = int) -> Optional[Union[int, float]]:
+
+def make_number_type(
+    value: Optional[str], num_type: Type[Union[int, float]] = int
+) -> Optional[Union[int, float]]:
     """
     Converts a string representation of a number to a specified number type (int or float).
 
@@ -36,14 +42,15 @@ def make_number_type(value: Optional[str], num_type: Type[Union[int, float]] = i
     Returns:
         Optional[Union[int, float]]: The converted number or None if conversion is not possible.
     """
-    if value is None or value == '-':
+    if value is None or value == "-":
         return None
     try:
         # Remove any non-digit characters except for potential decimal points if float
-        cleaned_value = re.sub(r'[^\d.]' if num_type is float else r'[^\d]', '', value)
+        cleaned_value = re.sub(r"[^\d.]" if num_type is float else r"[^\d]", "", value)
         return num_type(cleaned_value) if cleaned_value else None
     except (ValueError, TypeError):
-        return None # Handle potential conversion errors
+        return None  # Handle potential conversion errors
+
 
 def timelapse(start_time: datetime) -> float:
     """
@@ -57,7 +64,10 @@ def timelapse(start_time: datetime) -> float:
     """
     return round((datetime.now() - start_time).total_seconds() / 60, 4)
 
-def make_str_datetime(dt_obj: Optional[datetime], fmt: str = '%Y-%m-%d %H:%M:%S') -> Optional[str]:
+
+def make_str_datetime(
+    dt_obj: Optional[datetime], fmt: str = "%Y-%m-%d %H:%M:%S"
+) -> Optional[str]:
     """
     Converts a datetime object into a formatted string.
 
@@ -76,6 +86,7 @@ def make_str_datetime(dt_obj: Optional[datetime], fmt: str = '%Y-%m-%d %H:%M:%S'
         # Handle potential errors during formatting (e.g., invalid format string)
         return None
 
+
 def replace_all(text: str, old: str, new: str) -> str:
     """
     Replace all occurrences of a substring `old` with `new` in the string `text`.
@@ -88,13 +99,16 @@ def replace_all(text: str, old: str, new: str) -> str:
     Returns:
         str: The string with all occurrences of `old` replaced by `new`.
     """
-    if not old: # Avoid infinite loop if old is empty
+    if not old:  # Avoid infinite loop if old is empty
         return text
     while old in text:
         text = text.replace(old, new)
     return text
 
-def make_datetime(date_str: Optional[str], time_str: Optional[str]) -> Optional[datetime]:
+
+def make_datetime(
+    date_str: Optional[str], time_str: Optional[str]
+) -> Optional[datetime]:
     """
     Converts separate date and time strings into a single datetime object.
 
@@ -117,6 +131,7 @@ def make_datetime(date_str: Optional[str], time_str: Optional[str]) -> Optional[
         # Handle potential parsing errors if format doesn't match
         return None
 
+
 def hash_string(input_string: str) -> str:
     """
     Generates a SHA-256 hash for the input string.
@@ -129,6 +144,7 @@ def hash_string(input_string: str) -> str:
     """
     return SU.hash_string(input_string)
 
+
 def is_nan_or_empty(value: Any) -> bool:
     """
     Checks if a value is NaN (Not a Number), None, or an empty string.
@@ -139,5 +155,6 @@ def is_nan_or_empty(value: Any) -> bool:
     Returns:
         bool: True if the value is NaN, None, or empty, False otherwise.
     """
-    import pandas as pd # Local import to avoid circular dependency if utils is imported widely
-    return pd.isna(value) or value == ''
+    import pandas as pd  # Local import to avoid circular dependency if utils is imported widely
+
+    return pd.isna(value) or value == ""
