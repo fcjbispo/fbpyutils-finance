@@ -1,9 +1,34 @@
+"""
+fbpyutils_finance.investidor10 - Investidor10 FIIs (Fundos de Investimento Imobiliário) Data Provider
+
+Purpose: This module provides functionality to retrieve and consolidate daily FII (Real Estate Investment Funds) data from Investidor10 website, including payment calendars, IFIX composition, dividend yield rankings, and detailed indicators.
+
+Main contents:
+- get_fii_daily_position() (function): Main function to retrieve consolidated daily FII position
+- _create_db_indexes() (function): Create SQLite indexes for faster joins
+
+High-level usage pattern:
+Import get_fii_daily_position and call it to get a consolidated DataFrame with all FII information from multiple sources.
+
+Examples:
+>>> from fbpyutils_finance.investidor10 import get_fii_daily_position
+>>> df = get_fii_daily_position()
+>>> isinstance(df, pd.DataFrame)
+True
+>>> 'ticker' in df.columns
+True
+>>> 'payment' in df.columns
+True
+"""
+
 # fbpyutils_finance/investidor10/__init__.py
 import os
 import sqlite3
 import pandas as pd
 from multiprocessing import Pool
 from typing import List, Dict, Any, Optional
+
+from fbpyutils_finance import logger
 
 # Import functions from submodules
 from .constants import (
@@ -24,24 +49,32 @@ __all__ = ["get_fii_daily_position"]
 
 def _create_db_indexes(cursor: sqlite3.Cursor):
     """Creates indexes on the SQLite tables for faster joins."""
+    logger.info("Creating database indexes")
     try:
+        logger.debug("Creating index fii_payment_calendar_i01")
         cursor.execute(
             "create index fii_payment_calendar_i01 on fii_payment_calendar (substr(payment_date, 1, 4))"
         )
+        logger.debug("Creating index fii_payment_calendar_i02")
         cursor.execute(
             "create index fii_payment_calendar_i02 on fii_payment_calendar (payment_date, ticker)"
         )
+        logger.debug("Creating index fii_ifix_position_i01")
         cursor.execute(
             "create index fii_ifix_position_i01 on fii_ifix_position (ticker)"
         )
+        logger.debug("Creating index fii_dividend_yeld_ranking_i01")
         cursor.execute(
             "create index fii_dividend_yeld_ranking_i01 on fii_dividend_yeld_ranking (ticker)"
         )
+        logger.debug("Creating index fii_indicators_i01")
         cursor.execute(
             "create index fii_indicators_i01 on fii_indicators (ticker)"
         )  # Index added for indicators table
+        logger.info(f"Successfully created {5} database indexes")
     except sqlite3.OperationalError as e:
         # Handle cases where index might already exist if run multiple times in same session (though unlikely with :memory:)
+        logger.warning(f"Could not create index, it might already exist: {e}")
         print(f"Warning: Could not create index, it might already exist. Error: {e}")
 
 
@@ -78,6 +111,7 @@ def get_fii_daily_position(parallelize: Optional[bool] = None) -> pd.DataFrame:
     use_multiprocessing = (
         should_parallelize and os.cpu_count() is not None and os.cpu_count() > 1
     )
+    logger.info(f"get_fii_daily_position(parallelize={parallelize}) -> parallelize={should_parallelize}, use_multiprocessing={use_multiprocessing}")
 
     # Use in-memory SQLite database
     db: Optional[sqlite3.Connection] = None

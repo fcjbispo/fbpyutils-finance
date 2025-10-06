@@ -1,8 +1,29 @@
+"""
+fbpyutils_finance.cei.schemas.negociacao - CEI Negociação Schema Processor
+
+Purpose: This module provides functionality to process CEI 'Negociação de Ativos' (Asset Trading) Excel files, extracting and standardizing trading transaction data for analysis.
+
+Main contents:
+- process_schema_negociacao() (function): Process and consolidate trading data from Excel files
+
+High-level usage pattern:
+Import the function and call it with a list of CEI Excel file paths to get a consolidated DataFrame with processed trading data.
+
+Examples:
+>>> from fbpyutils_finance.cei.schemas.negociacao import process_schema_negociacao
+>>> result = process_schema_negociacao(['negociacao-2023-01-15.xlsx'])
+>>> isinstance(result, pd.DataFrame)
+True
+>>> len(result.columns) >= 10
+True
+"""
+
 # fbpyutils_finance/cei/schemas/negociacao.py
 import pandas as pd
 from typing import List, Optional
 
 from fbpyutils import xlsx as XL
+from fbpyutils_finance import logger
 from .utils import (
     _str_to_date,
     _tuple_as_str,
@@ -26,8 +47,22 @@ def process_schema_negociacao(input_files: List[str]) -> Optional[pd.DataFrame]:
         Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
                                 trading data. Returns an empty DataFrame if input_files
                                 is empty or no valid files are processed.
+
+    Examples:
+        >>> result = process_schema_negociacao([])
+        >>> isinstance(result, pd.DataFrame)
+        True
+        >>> len(result.columns)
+        12
+        >>> # Test with non-existent file (should handle gracefully)
+        >>> result = process_schema_negociacao(['nonexistent.xlsx'])
+        >>> isinstance(result, pd.DataFrame)
+        True
     """
+    logger.info(f"process_schema_negociacao(input_files={len(input_files)} files)")
+    
     if not input_files:
+        logger.debug("No input files provided, returning empty DataFrame")
         return pd.DataFrame()
 
     xl_dataframes = []
@@ -47,20 +82,25 @@ def process_schema_negociacao(input_files: List[str]) -> Optional[pd.DataFrame]:
     ]
 
     for schema_file in input_files:
+        logger.debug(f"Processing file: {schema_file}")
         try:
             schema_file_name, schema_file_date = extract_file_info(schema_file)
+            logger.debug(f"Extracted file info: name='{schema_file_name}', date={schema_file_date}")
 
             # Basic check if it's a 'negociacao' file
             if "negociacao" not in schema_file_name:
+                logger.warning(f"Skipping file {schema_file} as it doesn't appear to be a 'negociacao' type")
                 print(
                     f"Warning: Skipping file {schema_file} as it doesn't appear to be a 'negociacao' type."
                 )
                 continue
 
+            logger.debug(f"Loading Excel file: {schema_file}")
             xl_obj = XL.ExcelWorkbook(schema_file)
             xl_table = _tuple_as_str(tuple(xl_obj.read_sheet_by_index(0)))
 
             if not xl_table or len(xl_table) < 2:
+                logger.warning(f"Skipping file {schema_file} as it contains no data or header")
                 print(
                     f"Warning: Skipping file {schema_file} as it contains no data or header."
                 )
@@ -69,8 +109,10 @@ def process_schema_negociacao(input_files: List[str]) -> Optional[pd.DataFrame]:
             header = xl_table[0]
             data = xl_table[1:]
             xl_dataframe = pd.DataFrame(data, columns=header)
+            logger.debug(f"Created DataFrame with shape: {xl_dataframe.shape}")
 
             # --- Data Cleaning and Transformation ---
+            logger.debug("Starting data cleaning and transformation")
             column_mapping = {
                 "Data do Negócio": "data_negocio_raw",
                 "Tipo de Movimentação": "movimentacao",
@@ -90,9 +132,11 @@ def process_schema_negociacao(input_files: List[str]) -> Optional[pd.DataFrame]:
             xl_dataframe = xl_dataframe[list(rename_dict.keys())].rename(
                 columns=rename_dict
             )
+            logger.debug(f"Mapped {len(rename_dict)} columns")
 
             # Handle missing 'Conta' column
             if "conta_raw" not in xl_dataframe.columns:
+                logger.debug("'Conta' column missing, adding default value")
                 xl_dataframe["conta"] = "000000000"
             else:
                 xl_dataframe["conta"] = xl_dataframe["conta_raw"].apply(
@@ -113,6 +157,7 @@ def process_schema_negociacao(input_files: List[str]) -> Optional[pd.DataFrame]:
             )
 
             # Convert numeric columns
+            logger.debug("Converting numeric columns")
             xl_dataframe["quantidade"] = pd.to_numeric(
                 xl_dataframe["quantidade_raw"], errors="coerce"
             )
@@ -126,6 +171,7 @@ def process_schema_negociacao(input_files: List[str]) -> Optional[pd.DataFrame]:
             # Add metadata
             xl_dataframe["arquivo_origem"] = schema_file_name
             xl_dataframe["data_referencia"] = schema_file_date
+            logger.debug(f"Added metadata: file='{schema_file_name}', date={schema_file_date}")
 
             # Ensure all expected columns exist
             for field in fields:
@@ -133,13 +179,20 @@ def process_schema_negociacao(input_files: List[str]) -> Optional[pd.DataFrame]:
                     xl_dataframe[field] = None  # Or pd.NA
 
             xl_dataframes.append(xl_dataframe[fields].copy())
+            logger.debug(f"Added to results: {len(xl_dataframe)} rows")
 
         except ValueError as e:
+            logger.error(f"ValueError processing file {schema_file}: {e}")
             print(f"Error processing file {schema_file}: {e}")
         except Exception as e:
+            logger.error(f"Unexpected error processing file {schema_file}: {e}", exc_info=True)
             print(f"An unexpected error occurred while processing {schema_file}: {e}")
 
     if not xl_dataframes:
+        logger.warning("No valid dataframes to concatenate, returning empty DataFrame with columns")
         return pd.DataFrame(columns=fields)
 
-    return pd.concat(xl_dataframes, ignore_index=True)
+    logger.debug(f"Concatenating {len(xl_dataframes)} dataframes")
+    result = pd.concat(xl_dataframes, ignore_index=True)
+    logger.info(f"process_schema_negociacao() -> DataFrame with shape {result.shape}")
+    return result

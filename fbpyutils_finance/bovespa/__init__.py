@@ -21,6 +21,29 @@ Examples:
 ... (actual data varies)
 """
 
+"""
+fbpyutils_finance.bovespa - B3 (Bovespa) Historical Stock Data Provider
+
+Purpose: This module provides classes and functions to fetch, download, parse, and process historical stock data (COTAHIST) from B3 (Brazilian stock exchange), including ZIP file handling, fixed-width parsing, column conversion, and data validation for periods (daily, monthly, annual).
+
+Main contents:
+- FetchModes (class): Constants for data fetching modes (LOCAL, DOWNLOAD, etc.)
+- StockHistory (class): Main class for handling B3 historical data, with methods for path building, downloading, data treatment, local checks, and getting history
+- Static methods: validate_period_date(), to_float(), to_date(), get_info_tables()
+
+High-level usage pattern:
+Import StockHistory and create instance with download_folder, then call get_stock_history(period='A', fetch_mode=FetchModes.LOCAL_OR_DOWNLOAD) to get DataFrame of stock data.
+
+Examples:
+>>> from fbpyutils_finance.bovespa import StockHistory
+>>> history = StockHistory(download_folder='~/bovespa_data')
+>>> df = history.get_stock_history(period='A', period_data='2023')
+>>> print(df.head())
+   datpre  codbdi  tpmerc  codneg  nomres  especi  ...  preult  totneg  quotot  voltot
+0  20230103      2       1    A1AA11  A1AA11  A1AA11  ...    1234  1000   1234567
+... (actual data varies)
+"""
+
 import os
 import requests
 import pandas as pd
@@ -29,6 +52,7 @@ from typing import Any, Dict, Optional, Tuple  # Added date, Optional, Tuple, Di
 
 import fbpyutils_finance as FI
 from fbpyutils import file as F, xlsx as XL
+from fbpyutils_finance import logger
 
 
 _bvmf_cert = FI.CERTIFICATES["bvmf-bmfbovespa-com-br"]
@@ -234,7 +258,17 @@ class StockHistory:
 
         Raises:
             ValueError: If the string does not match any supported format.
+
+        Examples:
+            >>> StockHistory.validate_period_date('202301')
+            True
+            >>> StockHistory.validate_period_date('20230115')
+            True
+            >>> StockHistory.validate_period_date('invalid')
+            Traceback (most recent call last):
+            ValueError: Invalid date format or value: invalid
         """
+        logger.info(f"validate_period_date(period_date='{period_date}')")
         formats = ["%Y%m", "%Y%m%d"]  # Supported date formats
 
         for date_format in formats:
@@ -245,10 +279,12 @@ class StockHistory:
                     datetime.strptime(period_date, date_format).strftime(date_format)
                     == period_date
                 ):
+                    logger.info(f"validate_period_date() -> True")
                     return True  # Date is valid and matches format
             except ValueError:
                 pass
 
+        logger.error(f"validate_period_date() failed for '{period_date}'")
         raise ValueError("Invalid date format or value: " + period_date)
 
     @staticmethod
@@ -261,14 +297,26 @@ class StockHistory:
 
         Returns:
             float: The converted float value.
+
+        Examples:
+            >>> StockHistory.to_float('12345')
+            123.45
+            >>> StockHistory.to_float('100')
+            1.0
+            >>> StockHistory.to_float(123.45)
+            123.45
+            >>> StockHistory.to_float('')
+            0.0
         """
-        return (
+        result = (
             0.0
             if type(x) == str and not x
             else float(".".join([x[0:-2], x[-2:]]))
             if type(x) == str
             else float(x)
         )
+        logger.debug(f"to_float({x}) -> {result}")
+        return result
 
     @staticmethod
     def to_date(x: Any, format: str = "%Y%m%d") -> Optional[date]:
@@ -281,13 +329,24 @@ class StockHistory:
 
         Returns:
             Optional[date]: The converted date object, or None if conversion fails ('ignore' errors).
+
+        Examples:
+            >>> StockHistory.to_date('20230115')
+            datetime.date(2023, 1, 15)
+            >>> StockHistory.to_date('invalid')
+            >>> StockHistory.to_date('20230132')
+            # Returns None for invalid dates
         """
         result = pd.to_datetime(x, format=format, errors="ignore")
         if isinstance(result, str):
+            logger.debug(f"to_date({x}) -> None (invalid string)")
             return None
         if pd.isna(result):  # Check for NaT
+            logger.debug(f"to_date({x}) -> None (NaT)")
             return None
-        return result.date()
+        date_result = result.date()
+        logger.debug(f"to_date({x}) -> {date_result}")
+        return date_result
 
     @staticmethod
     def get_info_tables() -> Dict[str, Any]:
@@ -302,7 +361,15 @@ class StockHistory:
                             and values are pandas DataFrames of the sheet content.
                             Example: {'status': 'OK', 'tables': {'bdi_codes': DataFrame, ...}, 'message': '...'}
                             On error: {'status': 'ERROR', 'message': '...'}
+
+        Examples:
+            >>> result = StockHistory.get_info_tables()
+            >>> result['status']
+            'OK'
+            >>> 'bdi_codes' in result['tables']
+            True
         """
+        logger.info("get_info_tables()")
         info_tables_path = os.path.join(
             FI._ROOT_DIR, "bovespa", "tabelas_anexas_bovespa.xlsx"
         )
@@ -314,6 +381,7 @@ class StockHistory:
             sheet_names = XL.get_sheet_names(
                 info_tables_path
             )  # Use get_sheet_names function
+            logger.debug(f"Found {len(sheet_names)} sheets")
             for sheet in sheet_names:  # Iterate through sheet_names
                 # Assuming read_sheet returns a tuple/list of lists/tuples
                 info_data = tuple(info_tables.read_sheet(sheet))
@@ -324,16 +392,20 @@ class StockHistory:
                             str(c).lower() for c in info_data[0]
                         ],  # Ensure columns are strings
                     )
+                    logger.debug(f"Processed sheet '{sheet}' with {len(info_data)} rows")
                 else:
                     response["tables"][sheet] = pd.DataFrame()  # Handle empty sheets
+                    logger.debug(f"Empty sheet '{sheet}'")
             response["message"] = (
                 f"All {len(sheet_names)} sheets fetched."  # Use sheet_names variable
             )
+            logger.info(f"get_info_tables() -> {response['message']}")
             return response
         except Exception as e:
             response["status"] = "ERROR"
             response["message"] = f"Error fetching bovespa info tables: {str(e)}"
             response.pop("tables", None)  # Remove tables key on error
+            logger.error(f"get_info_tables() failed: {response['message']}", exc_info=True)
             return response
 
     def __init__(self, download_folder: Optional[str] = None) -> None:
@@ -347,17 +419,29 @@ class StockHistory:
 
         Raises:
             OSError: If the specified download_folder does not exist or is not a directory.
+
+        Examples:
+            >>> history = StockHistory('~/bovespa_data')
+            >>> history.download_folder.endswith('bovespa_data')
+            True
+            >>> history = StockHistory()  # Uses home directory
+            >>> history.download_folder == os.path.expanduser('~')
+            True
         """
+        logger.info(f"StockHistory.__init__(download_folder='{download_folder}')")
         if download_folder is None or len(download_folder) == 0:
             download_folder = os.path.expanduser("~")
 
         if not os.path.exists(download_folder):
+            logger.error(f"Download folder does not exist: {download_folder}")
             raise OSError("Path doesn't exists.")
 
         if not os.path.isdir(download_folder):
+            logger.error(f"Download folder is not a directory: {download_folder}")
             raise OSError("Path is not a folder.")
 
         self.download_folder = download_folder
+        logger.info(f"StockHistory.__init__() -> download_folder='{self.download_folder}'")
 
     def _build_paths(
         self, period: str = "A", period_date: Optional[str] = None
@@ -380,10 +464,21 @@ class StockHistory:
 
         Raises:
             ValueError: If the period is invalid or period_date format is incorrect.
+
+        Examples:
+            >>> history = StockHistory()
+            >>> url, path = history._build_paths('A', '2023')
+            >>> 'COTAHIST_A2023.ZIP' in url
+            True
+            >>> url, path = history._build_paths('M', '012023')
+            >>> 'COTAHIST_M012023.ZIP' in url
+            True
         """
+        logger.info(f"_build_paths(period='{period}', period_date='{period_date}')")
         period = period or "A"
 
         if period is None or period not in ["A", "M", "D"]:
+            logger.error(f"Invalid period: {period}")
             raise ValueError("Invalid period. User A, M or D.")
 
         if period_date:
@@ -403,6 +498,7 @@ class StockHistory:
 
         output_file = os.path.sep.join([self.download_folder, cotfile])
 
+        logger.debug(f"_build_paths() -> url='{url}', output_file='{output_file}'")
         return url, output_file
 
     def _download_stock_history(
@@ -422,17 +518,30 @@ class StockHistory:
             requests.exceptions.RequestException: If the download fails.
             ValueError: If period or period_data are invalid (via _build_paths).
             OSError: If file writing fails.
+
+        Examples:
+            >>> history = StockHistory('~/bovespa_data')
+            >>> file_path = history._download_stock_history('A', '2023')
+            >>> file_path.endswith('.ZIP')
+            True
+            >>> os.path.exists(file_path)
+            True
         """
+        logger.info(f"_download_stock_history(period='{period}', period_data='{period_data}')")
         url, output_file = self._build_paths(period, period_data)
 
         block_size = 1024**3
 
+        logger.debug(f"Downloading from {url} to {output_file}")
         response = requests.get(url, stream=True, verify=_bvmf_cert)
+        
+        logger.debug(f"Download response status: {response.status_code}")
 
         with open(output_file, "wb") as handle:
             for data in response.iter_content(block_size):
                 handle.write(data)
 
+        logger.info(f"_download_stock_history() -> '{output_file}'")
         return output_file
 
     def _treat_data(
@@ -453,8 +562,19 @@ class StockHistory:
 
         Returns:
             pd.DataFrame: The processed DataFrame.
+
+        Examples:
+            >>> raw_data = pd.DataFrame({'record_type': ['1', '2'], 'trade_date': ['20230101', '20230101']})
+            >>> history = StockHistory()
+            >>> treated = history._treat_data(raw_data, False, False)
+            >>> 'record_type' in treated.columns
+            True
         """
+        logger.info(f"_treat_data(data.shape={data.shape}, original_names={original_names}, compact={compact})")
+        
+        logger.debug(f"Filtering data for record_type == '1'")
         cot_data = data[data["record_type"] == "1"].copy(deep=True)
+        logger.debug(f"Filtered data shape: {cot_data.shape}")
 
         for col in [
             "open_value",
@@ -464,23 +584,31 @@ class StockHistory:
             "close_value",
             "total_trades_value",
         ]:
+            logger.debug(f"Converting column '{col}' to float")
             cot_data[col] = cot_data[col].apply(StockHistory.to_float)
 
+        logger.debug(f"Converting trade_date to date")
         cot_data["trade_date"] = cot_data["trade_date"].apply(StockHistory.to_date)
 
         cot_data = cot_data.fillna(0)
+        logger.debug(f"Filled NaN values with 0")
 
         if original_names:
+            logger.debug(f"Using original column names")
             cot_data.columns = self._original_col_names
             if compact:
-                return cot_data[self._original_data_columns]
+                result = cot_data[self._original_data_columns]
             else:
-                return cot_data
+                result = cot_data
         else:
+            logger.debug(f"Using standard column names")
             if compact:
-                return cot_data[self._data_columns]
+                result = cot_data[self._data_columns]
             else:
-                return cot_data
+                result = cot_data
+
+        logger.info(f"_treat_data() -> DataFrame with shape {result.shape}")
+        return result
 
     def _check_local_history(
         self, period: str = "A", period_data: Optional[str] = None
@@ -494,14 +622,24 @@ class StockHistory:
 
         Returns:
             bool: True if a valid local ZIP file exists, False otherwise.
+
+        Examples:
+            >>> history = StockHistory('~/bovespa_data')
+            >>> exists = history._check_local_history('A', '2023')
+            >>> isinstance(exists, bool)
+            True
         """
+        logger.info(f"_check_local_history(period='{period}', period_data='{period_data}')")
         _, local_file = self._build_paths(period, period_data)
 
-        return (
+        exists = (
             os.path.exists(local_file)
             and os.path.isfile(local_file)
             and F.mime_type(local_file) == "application/zip"
         )
+        logger.debug(f"Local file check: {local_file} exists={exists}")
+        logger.info(f"_check_local_history() -> {exists}")
+        return exists
 
     def get_stock_history(
         self,
@@ -530,37 +668,57 @@ class StockHistory:
             OSError: If local file access fails when required.
             requests.exceptions.RequestException: If download fails.
             Exception: For errors during file reading or processing.
+
+        Examples:
+            >>> history = StockHistory('~/bovespa_data')
+            >>> df = history.get_stock_history(period='A', period_data='2023')
+            >>> isinstance(df, pd.DataFrame)
+            True
+            >>> len(df.columns)  # compact=True by default
+            17
         """
+        logger.info(f"get_stock_history(period='{period}', period_data='{period_data}', fetch_mode={fetch_mode}, compact={compact}, original_names={original_names})")
+        
         if fetch_mode not in [
             FetchModes.LOCAL,
             FetchModes.DOWNLOAD,
             FetchModes.LOCAL_OR_DOWNLOAD,
             FetchModes.STREAM,
         ]:
+            logger.error(f"Invalid fetch mode: {fetch_mode}")
             raise ValueError("Invalid fetch mode.")
 
         if fetch_mode == FetchModes.LOCAL_OR_DOWNLOAD:
+            logger.debug("Checking local history first")
             if self._check_local_history(period, period_data):
                 fetch_mode = FetchModes.LOCAL
+                logger.debug("Using local data")
             else:
                 fetch_mode = FetchModes.DOWNLOAD
+                logger.debug("Local data not found, will download")
 
         if fetch_mode == FetchModes.DOWNLOAD:
+            logger.info("Downloading stock history")
             data_file = self._download_stock_history(period, period_data)
 
         if fetch_mode == FetchModes.LOCAL:
+            logger.info("Using local stock history")
             if self._check_local_history(period, period_data):
                 _, data_file = self._build_paths(period, period_data)
             else:
+                logger.error("Local file not found or invalid")
                 raise OSError("Invalid or non existent local file.")
 
         if fetch_mode == FetchModes.STREAM:
+            logger.info("Using stream mode")
             data_file, _ = self._build_paths(period, period_data)
 
         cot = None
         encoding_list = ["ISO-8859-1", "cp1252", "latin", "utf-8"]
+        logger.debug(f"Trying encodings: {encoding_list}")
         while cot is None and len(encoding_list) > 0:
             encoding = encoding_list.pop()
+            logger.debug(f"Trying encoding: {encoding}")
             try:
                 cot = pd.read_fwf(
                     data_file,
@@ -571,14 +729,20 @@ class StockHistory:
                     converters=self._converters,
                     encoding=encoding,
                 )
+                logger.debug(f"Successfully read data with encoding: {encoding}")
             except UnicodeDecodeError:
                 cot = None
+                logger.debug(f"Encoding {encoding} failed")
 
         if cot is None:
+            logger.error("Failed to read data with any known encoding")
             # Raise a runtime error as we couldn't decode the file with any known encoding
             raise RuntimeError("Error reading stock history file. Unknown encoding.")
 
         if type(cot) != pd.core.frame.DataFrame:
+            logger.error(f"Unexpected data type: {type(cot)}")
             raise TypeError("Failed to get the stock history. Invalid output data.")
 
-        return self._treat_data(cot, original_names, compact)
+        result = self._treat_data(cot, original_names, compact)
+        logger.info(f"get_stock_history() -> DataFrame with shape {result.shape}")
+        return result

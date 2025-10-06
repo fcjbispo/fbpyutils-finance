@@ -1,5 +1,23 @@
 """
-Tesouro Direto search info provider.
+fbpyutils_finance.tesourodireto - Tesouro Direto (Brazilian Treasury Bonds) Info Provider
+
+Purpose: This module provides functionality to retrieve information about Brazilian Treasury Bonds (Tesouro Direto) including bond details, rates, market status, and pricing information.
+
+Main contents:
+- treasury_bonds() (function): Retrieve information about treasury bonds from Tesouro Direto API
+
+High-level usage pattern:
+Import treasury_bonds and call it with specific bond names or without parameters to get information about available Brazilian treasury bonds.
+
+Examples:
+>>> from fbpyutils_finance.tesourodireto import treasury_bonds
+>>> bonds = treasury_bonds()
+>>> bonds['status']
+'SUCCESS'
+>>> # Get specific bond
+>>> bond = treasury_bonds('Tesouro IPCA+ 2035')
+>>> isinstance(bond['details']['bonds'], list)
+True
 """
 
 import requests
@@ -11,42 +29,44 @@ from fbpyutils.datetime import apply_timezone
 from typing import Dict
 from datetime import datetime
 
+from fbpyutils_finance import logger
+
 urllib3.disable_warnings()
 
 
 def treasury_bonds(x: str = None) -> Dict:
     """
     Retrieve information about treasury bonds from a specific source.
-     Args:
-    - x (str, optional): The name of the bond to retrieve information for. If not provided, information for all bonds is retrieved.
-     Returns:
-    - result (Dict): A dictionary containing information about the treasury bonds.
-      - 'info' (str): Information about the type of bonds ('TREASURY BOND').
-      - 'source' (str): The source of the bond information ('TESOURO DIRETO').
-      - 'status' (str): The status of the retrieval process ('SUCCESS', 'NOT FOUND', or 'ERROR').
-      - 'details' (Dict): Additional details about the bonds.
-        - 'market' (Dict): Information about the market status and timings.
-          - 'status' (str): The status of the market ('OPEN' or 'CLOSED').
-          - 'closing_time' (datetime): The closing time of the market.
-          - 'opening_time' (datetime): The opening time of the market.
-          - 'position_time' (datetime): The time of the bond position.
-        - 'matches' (int): The number of bonds that match the provided name (if any).
-        - 'bonds' (List[Dict]): A list of dictionaries containing information about the matching bonds.
-          - 'bond_name' (str): The name of the bond.
-          - 'due_date' (datetime): The due date of the bond.
-          - 'financial_indexer' (str): The financial indexer of the bond.
-          - 'annual_investment_rate' (float): The annual investment rate of the bond.
-          - 'annual_redemption_rate' (float): The annual redemption rate of the bond.
-          - 'isin_code' (str): The ISIN code of the bond.
-          - 'sell_price' (float): The sell price of the bond.
-          - 'sell_price_unit' (float): The sell price unit of the bond.
-          - 'buy_price' (float): The buy price of the bond.
-          - 'buy_price_unit' (float): The buy price unit of the bond.
-          - 'extended_description' (str): The extended description of the bond.
-     Raises:
-    - TypeError: If all ciphers fail to negotiate a secure connection.
-    - SystemError: If there is an error getting information from the source.
+
+    Args:
+        x (str, optional): The name of the bond to retrieve information for. If not provided, information for all bonds is retrieved.
+
+    Returns:
+        Dict: A dictionary containing information about the treasury bonds.
+            - 'info' (str): Information about the type of bonds ('TREASURY BOND').
+            - 'source' (str): The source of the bond information ('TESOURO DIRETO').
+            - 'status' (str): The status of the retrieval process ('SUCCESS', 'NOT FOUND', or 'ERROR').
+            - 'details' (Dict): Additional details about the bonds.
+                - 'market' (Dict): Information about the market status and timings.
+                - 'matches' (int): The number of bonds that match the provided name (if any).
+                - 'bonds' (List[Dict]): A list of dictionaries containing information about the matching bonds.
+
+    Raises:
+        TypeError: If all ciphers fail to negotiate a secure connection.
+        SystemError: If there is an error getting information from the source.
+
+    Examples:
+        >>> bonds = treasury_bonds()
+        >>> bonds['status'] in ['SUCCESS', 'NOT FOUND', 'ERROR']
+        True
+        >>> # Get specific bond
+        >>> bond_info = treasury_bonds('Tesouro IPCA+ 2035')
+        >>> 'bonds' in bond_info['details']
+        True
+        >>> isinstance(bond_info['details']['bonds'], list)
+        True
     """
+    logger.info(f"treasury_bonds(x='{x}')")
     h = {
         "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0",
         "Connection": "keep-alive",
@@ -55,6 +75,7 @@ def treasury_bonds(x: str = None) -> Dict:
     }
 
     u = "https://www.tesourodireto.com.br/json/br/com/b3/tesourodireto/service/api/treasurybondsinfo.json"
+    logger.debug(f"Treasury API URL: {u}")
 
     result = {
         "info": "TREASURY BOND",
@@ -67,19 +88,24 @@ def treasury_bonds(x: str = None) -> Dict:
     r = None
 
     try:
+        logger.debug("Making request to Tesouro Direto API")
         r = requests.get(u, verify=False, headers=h)
 
         if not r:
+            logger.error("All cipher negotiations failed")
             raise TypeError(
                 "All ciphers tryied to negotiate secure connection. No success at all."
             )
 
+        logger.debug(f"API response status: {r.status_code}")
         data = r.json()
 
         if data.get("responseStatus") != 200:
+            logger.error(f"API returned non-200 status: {data.get('responseStatus')}")
             raise SystemError("Error getting information from source")
 
         response_data = data.get("response")
+        logger.debug("Successfully parsed JSON response")
 
         response_market_data = response_data["TrsrBondMkt"]
 
@@ -99,6 +125,7 @@ def treasury_bonds(x: str = None) -> Dict:
                 datetime.fromisoformat(response_business_data["dtTm"]), tz
             ),
         }
+        logger.debug(f"Market info: {market_info}")
 
         bonds = [
             {
@@ -124,12 +151,15 @@ def treasury_bonds(x: str = None) -> Dict:
             for b in response_data.get("TrsrBdTradgList", {})
             if b and (b.get("TrsrBd", {}).get("nm", "NA") == x or x is None)
         ]
+        logger.debug(f"Found {len(bonds)} bonds matching criteria")
 
         if len(bonds) == 0:
+            logger.warning(f"No bonds found matching: {x or 'ALL'}")
             result["status"] = "NOT FOUND"
             result["details"] = {
                 "bond_name": x or "ALL",
             }
+            logger.info("treasury_bonds() -> NOT FOUND")
             return result
 
         result["details"] = {
@@ -137,8 +167,10 @@ def treasury_bonds(x: str = None) -> Dict:
             "matches": len(bonds),
             "bonds": bonds,
         }
+        logger.info(f"treasury_bonds() -> SUCCESS: found {len(bonds)} bonds")
 
     except Exception as e:
+        logger.error(f"Error retrieving treasury bonds: {e}", exc_info=True)
         m = debug.debug_info(e)
         result["status"] = "ERROR"
         result["details"] = {"error_message": m}
