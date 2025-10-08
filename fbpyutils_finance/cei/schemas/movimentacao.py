@@ -60,7 +60,7 @@ def process_schema_movimentacao(input_files: List[str]) -> Optional[pd.DataFrame
         True
     """
     logger.info(f"process_schema_movimentacao(input_files={len(input_files)} files)")
-    
+
     if not input_files:
         logger.debug("No input files provided, returning empty DataFrame")
         return pd.DataFrame()  # Return empty DataFrame if no input files
@@ -85,11 +85,15 @@ def process_schema_movimentacao(input_files: List[str]) -> Optional[pd.DataFrame
         logger.debug(f"Processing file: {schema_file}")
         try:
             schema_file_name, schema_file_date = extract_file_info(schema_file)
-            logger.debug(f"Extracted file info: name='{schema_file_name}', date={schema_file_date}")
+            logger.debug(
+                f"Extracted file info: name='{schema_file_name}', date={schema_file_date}"
+            )
 
             # Ensure it's actually a 'movimentacao' file based on extracted type
             if schema_file_name != "movimentacao":
-                logger.warning(f"Skipping file {schema_file} as it doesn't appear to be a 'movimentacao' type")
+                logger.warning(
+                    f"Skipping file {schema_file} as it doesn't appear to be a 'movimentacao' type"
+                )
                 print(
                     f"Warning: Skipping file {schema_file} as it doesn't appear to be a 'movimentacao' type."
                 )
@@ -103,7 +107,9 @@ def process_schema_movimentacao(input_files: List[str]) -> Optional[pd.DataFrame
             if (
                 not xl_table or len(xl_table) < 2
             ):  # Check if table has header and at least one data row
-                logger.warning(f"Skipping file {schema_file} as it contains no data or header")
+                logger.warning(
+                    f"Skipping file {schema_file} as it contains no data or header"
+                )
                 print(
                     f"Warning: Skipping file {schema_file} as it contains no data or header."
                 )
@@ -183,7 +189,9 @@ def process_schema_movimentacao(input_files: List[str]) -> Optional[pd.DataFrame
             # Add metadata
             xl_dataframe["arquivo_origem"] = schema_file_name
             xl_dataframe["data_referencia"] = schema_file_date
-            logger.debug(f"Added metadata: file='{schema_file_name}', date={schema_file_date}")
+            logger.debug(
+                f"Added metadata: file='{schema_file_name}', date={schema_file_date}"
+            )
 
             # Select final columns and append
             xl_dataframes.append(xl_dataframe[fields].copy())
@@ -193,11 +201,15 @@ def process_schema_movimentacao(input_files: List[str]) -> Optional[pd.DataFrame
             logger.error(f"ValueError processing file {schema_file}: {e}")
             print(f"Error processing file {schema_file}: {e}")
         except Exception as e:
-            logger.error(f"Unexpected error processing file {schema_file}: {e}", exc_info=True)
+            logger.error(
+                f"Unexpected error processing file {schema_file}: {e}", exc_info=True
+            )
             print(f"An unexpected error occurred while processing {schema_file}: {e}")
 
     if not xl_dataframes:
-        logger.warning("No valid dataframes to concatenate, returning empty DataFrame with columns")
+        logger.warning(
+            "No valid dataframes to concatenate, returning empty DataFrame with columns"
+        )
         return pd.DataFrame(
             columns=fields
         )  # Return empty DataFrame with correct columns if no files processed

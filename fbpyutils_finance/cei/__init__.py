@@ -155,9 +155,13 @@ def get_cei_data(
         >>> all(isinstance(r, tuple) and len(r) == 3 for r in results)
         True
     """
-    logger.info(f"get_cei_data(input_folder='{input_folder}', parallelize={parallelize})")
+    logger.info(
+        f"get_cei_data(input_folder='{input_folder}', parallelize={parallelize})"
+    )
     PARALLELIZE = parallelize and os.cpu_count() > 1
-    logger.debug(f"Using parallel processing: {PARALLELIZE} (CPU count: {os.cpu_count()})")
+    logger.debug(
+        f"Using parallel processing: {PARALLELIZE} (CPU count: {os.cpu_count()})"
+    )
     operations = []
 
     for op, mask, processor, enabled in _OPERATIONS:
@@ -186,5 +190,7 @@ def get_cei_data(
             data.append(_process_operation(operation))
 
     total_rows = sum(row_count for _, row_count, _ in data)
-    logger.info(f"get_cei_data() -> Processed {len(data)} operations, {total_rows} total rows")
+    logger.info(
+        f"get_cei_data() -> Processed {len(data)} operations, {total_rows} total rows"
+    )
     return data

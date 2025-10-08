@@ -20,13 +20,13 @@ Lista de arquivos Python no projeto fbpyutils_finance/ que precisam de revisão 
 - [x] fbpyutils_finance/cei/schemas/eventos_provisionados.py
 - [x] fbpyutils_finance/cei/schemas/movimentacao.py
 - [x] fbpyutils_finance/cei/schemas/negociacao.py
-- [ ] fbpyutils_finance/cei/schemas/posicao_acoes.py
-- [ ] fbpyutils_finance/cei/schemas/posicao_emprestimo_ativos.py
-- [ ] fbpyutils_finance/cei/schemas/posicao_etf.py
-- [ ] fbpyutils_finance/cei/schemas/posicao_fundos_investimento.py
-- [ ] fbpyutils_finance/cei/schemas/posicao_renda_fixa.py
-- [ ] fbpyutils_finance/cei/schemas/posicao_tesouro_direto.py
-- [ ] fbpyutils_finance/cei/schemas/utils.py
+- [x] fbpyutils_finance/cei/schemas/posicao_acoes.py
+- [x] fbpyutils_finance/cei/schemas/posicao_emprestimo_ativos.py
+- [x] fbpyutils_finance/cei/schemas/posicao_etf.py
+- [x] fbpyutils_finance/cei/schemas/posicao_fundos_investimento.py
+- [x] fbpyutils_finance/cei/schemas/posicao_renda_fixa.py
+- [x] fbpyutils_finance/cei/schemas/posicao_tesouro_direto.py
+- [x] fbpyutils_finance/cei/schemas/utils.py
 
 ## Módulo CVM
 - [x] fbpyutils_finance/cvm/__init__.py
@@ -59,7 +59,7 @@ Lista de arquivos Python no projeto fbpyutils_finance/ que precisam de revisão 
 
 ## Progresso Geral
 - Total de arquivos: 38
-- Concluídos: 19
-- Pendentes: 19
+- Concluídos: 27
+- Pendentes: 11
 
 Atualize esta lista à medida que processar cada arquivo.

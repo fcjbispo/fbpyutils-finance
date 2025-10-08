@@ -17,6 +17,7 @@ Examples:
 >>> print(result['details']['price'] if result['status'] == 'SUCCESS' else result['details']['error_message'])
 30.50  # Example price, actual varies
 """
+
 from fbpyutils import debug
 
 from typing import Dict, Optional
@@ -24,7 +25,10 @@ import requests
 import datetime
 from bs4 import BeautifulSoup
 
-from fbpyutils_finance import numberize, logger  # Removed unused MARKET_INFO, first_or_none
+from fbpyutils_finance import (
+    numberize,
+    logger,
+)  # Removed unused MARKET_INFO, first_or_none
 
 
 def _makeurl(x: str) -> str:
@@ -158,7 +162,9 @@ def stock_price(x: str, market: Optional[str] = None) -> Dict:
                 element1.text,
                 *element2.text.replace(" ", "").split(":"),
             )
-            logger.debug(f"Extracted: ticker_name={ticker_name}, market={market}, ticker={ticker}")
+            logger.debug(
+                f"Extracted: ticker_name={ticker_name}, market={market}, ticker={ticker}"
+            )
         else:
             logger.error(f"Bing Search Fail on step {step}: missing elements")
             raise ValueError(f"Bing Search Fail on step {step}!")

@@ -1,4 +1,21 @@
-# fbpyutils_finance/cei/schemas/posicao_etf.py
+"""
+Processamento de dados de posição de ETFs do CEI (Canal Eletrônico do Investidor).
+
+Este módulo fornece funcionalidades para processar arquivos Excel de posição de ETFs
+do CEI, extraindo dados da planilha 'ETF', padronizando colunas e realizando conversões
+de tipos de dados.
+
+Exemplos:
+    >>> from fbpyutils_finance.cei.schemas.posicao_etf import process_schema_posicao_etf
+    >>> # Processar múltiplos arquivos de posição de ETFs
+    >>> files = ['posicao-2023-01.xlsx', 'posicao-2023-02.xlsx']
+    >>> df = process_schema_posicao_etf(files)
+    >>> print(df.columns.tolist())
+    ['codigo_produto', 'nome_produto', 'instituicao', 'conta', 'codigo_isin',
+     'tipo_produto', 'quantidade', 'quantidade_disponivel', 'quantidade_indisponivel',
+     'motivo', 'preco_unitario', 'valor_operacao', 'arquivo_origem', 'data_referencia']
+"""
+
 import pandas as pd
 from typing import List, Optional
 
@@ -9,6 +26,8 @@ from .utils import (
     extract_file_info,
     # extract_product_id is not used here
 )
+
+from fbpyutils_finance import logger
 
 
 def process_schema_posicao_etf(input_files: List[str]) -> Optional[pd.DataFrame]:
@@ -25,8 +44,27 @@ def process_schema_posicao_etf(input_files: List[str]) -> Optional[pd.DataFrame]
         Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
                                 ETF position data. Returns an empty DataFrame if input_files
                                 is empty or the 'ETF' sheet is not found or has no data.
+
+    Examples:
+        >>> # Processar arquivo único
+        >>> df = process_schema_posicao_etf(['posicao-2023-01.xlsx'])
+        >>> print(len(df.columns))
+        14
+
+        >>> # Processar lista vazia retorna DataFrame vazio
+        >>> df = process_schema_posicao_etf([])
+        >>> df.empty
+        True
+
+        >>> # Processar arquivo inexistente retorna DataFrame vazio
+        >>> df = process_schema_posicao_etf(['arquivo_inexistente.xlsx'])
+        >>> df.empty
+        True
     """
+    logger.info(f"process_schema_posicao_etf: input_files={len(input_files)} files")
+
     if not input_files:
+        logger.debug("input_files is empty, returning empty DataFrame")
         return pd.DataFrame()
 
     xl_dataframes = []
@@ -50,12 +88,16 @@ def process_schema_posicao_etf(input_files: List[str]) -> Optional[pd.DataFrame]
     xl_sheet_to_process = "ETF"
 
     for schema_file in input_files:
+        logger.debug(f"Processing file: {schema_file}")
         try:
             schema_file_name, schema_file_date = extract_file_info(schema_file)
+            logger.debug(
+                f"Extracted file info: name={schema_file_name}, date={schema_file_date}"
+            )
 
             if "posicao" not in schema_file_name:
-                print(
-                    f"Warning: Skipping file {schema_file} as it doesn't appear to be a 'posicao' type."
+                logger.warning(
+                    f"Skipping file {schema_file} as it doesn't appear to be a 'posicao' type."
                 )
                 continue
 
@@ -65,10 +107,11 @@ def process_schema_posicao_etf(input_files: List[str]) -> Optional[pd.DataFrame]
                 xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet_to_process)))
 
                 if not xl_table or len(xl_table) < 2:
-                    print(
-                        f"Warning: Sheet '{xl_sheet_to_process}' in {schema_file} contains no data or header."
+                    logger.warning(
+                        f"Sheet '{xl_sheet_to_process}' in {schema_file} contains no data or header."
                     )
                     continue  # Skip file if sheet is empty
+                logger.debug(f"Sheet '{xl_sheet_to_process}' has {len(xl_table)} rows")
 
                 header = xl_table[0]
                 data = xl_table[1:]
@@ -77,16 +120,17 @@ def process_schema_posicao_etf(input_files: List[str]) -> Optional[pd.DataFrame]
                 if "Produto" in xl_dataframe.columns:
                     xl_dataframe = xl_dataframe[xl_dataframe["Produto"] != ""].copy()
                 else:
-                    print(
-                        f"Warning: 'Produto' column not found in sheet '{xl_sheet_to_process}' of {schema_file}."
+                    logger.warning(
+                        f"'Produto' column not found in sheet '{xl_sheet_to_process}' of {schema_file}."
                     )
                     continue  # Skip file if essential column is missing
 
                 if xl_dataframe.empty:
-                    print(
-                        f"Warning: No data left in sheet '{xl_sheet_to_process}' of {schema_file} after filtering."
+                    logger.warning(
+                        f"No data left in sheet '{xl_sheet_to_process}' of {schema_file} after filtering."
                     )
                     continue
+                logger.debug(f"DataFrame after filtering has {len(xl_dataframe)} rows")
 
                 # --- Data Cleaning and Transformation ---
                 column_mapping = {
@@ -113,8 +157,8 @@ def process_schema_posicao_etf(input_files: List[str]) -> Optional[pd.DataFrame]
                     "instituicao_raw",
                 ]
                 if not all(col in rename_dict.values() for col in required_raw_cols):
-                    print(
-                        f"Warning: Missing one or more essential columns in sheet '{xl_sheet_to_process}' of {schema_file}. Skipping file."
+                    logger.warning(
+                        f"Missing one or more essential columns in sheet '{xl_sheet_to_process}' of {schema_file}. Skipping file."
                     )
                     continue
 
@@ -143,6 +187,7 @@ def process_schema_posicao_etf(input_files: List[str]) -> Optional[pd.DataFrame]
                 # 'codigo_isin', 'tipo_produto', 'motivo' are directly mapped
 
                 # Convert numeric columns
+                logger.debug("Converting numeric columns")
                 xl_dataframe["quantidade"] = pd.to_numeric(
                     xl_dataframe["quantidade_raw"], errors="coerce"
                 )
@@ -157,6 +202,9 @@ def process_schema_posicao_etf(input_files: List[str]) -> Optional[pd.DataFrame]
                 )
                 xl_dataframe["valor_operacao"] = pd.to_numeric(
                     xl_dataframe["valor_operacao_raw"], errors="coerce"
+                )
+                logger.debug(
+                    "Converted columns: quantidade, quantidade_disponivel, quantidade_indisponivel, preco_unitario, valor_operacao"
                 )
 
                 # Add metadata
@@ -173,16 +221,26 @@ def process_schema_posicao_etf(input_files: List[str]) -> Optional[pd.DataFrame]
 
                 xl_dataframes.append(xl_dataframe[fields].copy())
             else:
-                print(
-                    f"Info: Sheet '{xl_sheet_to_process}' not found in {schema_file}."
+                logger.info(
+                    f"Sheet '{xl_sheet_to_process}' not found in {schema_file}."
                 )
 
         except ValueError as e:
-            print(f"Error processing file {schema_file}: {e}")
+            logger.error(f"Error processing file {schema_file}: {e}", exc_info=True)
         except Exception as e:
-            print(f"An unexpected error occurred while processing {schema_file}: {e}")
+            logger.error(
+                f"An unexpected error occurred while processing {schema_file}: {e}",
+                exc_info=True,
+            )
 
     if not xl_dataframes:
+        logger.debug(
+            "No dataframes to concatenate, returning empty DataFrame with columns"
+        )
         return pd.DataFrame(columns=fields)
 
-    return pd.concat(xl_dataframes, ignore_index=True)
+    result_df = pd.concat(xl_dataframes, ignore_index=True)
+    logger.info(
+        f"process_schema_posicao_etf: returning DataFrame with {len(result_df)} rows and {len(result_df.columns)} columns"
+    )
+    return result_df

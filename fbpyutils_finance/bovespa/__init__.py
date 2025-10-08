@@ -21,29 +21,6 @@ Examples:
 ... (actual data varies)
 """
 
-"""
-fbpyutils_finance.bovespa - B3 (Bovespa) Historical Stock Data Provider
-
-Purpose: This module provides classes and functions to fetch, download, parse, and process historical stock data (COTAHIST) from B3 (Brazilian stock exchange), including ZIP file handling, fixed-width parsing, column conversion, and data validation for periods (daily, monthly, annual).
-
-Main contents:
-- FetchModes (class): Constants for data fetching modes (LOCAL, DOWNLOAD, etc.)
-- StockHistory (class): Main class for handling B3 historical data, with methods for path building, downloading, data treatment, local checks, and getting history
-- Static methods: validate_period_date(), to_float(), to_date(), get_info_tables()
-
-High-level usage pattern:
-Import StockHistory and create instance with download_folder, then call get_stock_history(period='A', fetch_mode=FetchModes.LOCAL_OR_DOWNLOAD) to get DataFrame of stock data.
-
-Examples:
->>> from fbpyutils_finance.bovespa import StockHistory
->>> history = StockHistory(download_folder='~/bovespa_data')
->>> df = history.get_stock_history(period='A', period_data='2023')
->>> print(df.head())
-   datpre  codbdi  tpmerc  codneg  nomres  especi  ...  preult  totneg  quotot  voltot
-0  20230103      2       1    A1AA11  A1AA11  A1AA11  ...    1234  1000   1234567
-... (actual data varies)
-"""
-
 import os
 import requests
 import pandas as pd
@@ -392,7 +369,9 @@ class StockHistory:
                             str(c).lower() for c in info_data[0]
                         ],  # Ensure columns are strings
                     )
-                    logger.debug(f"Processed sheet '{sheet}' with {len(info_data)} rows")
+                    logger.debug(
+                        f"Processed sheet '{sheet}' with {len(info_data)} rows"
+                    )
                 else:
                     response["tables"][sheet] = pd.DataFrame()  # Handle empty sheets
                     logger.debug(f"Empty sheet '{sheet}'")
@@ -405,7 +384,9 @@ class StockHistory:
             response["status"] = "ERROR"
             response["message"] = f"Error fetching bovespa info tables: {str(e)}"
             response.pop("tables", None)  # Remove tables key on error
-            logger.error(f"get_info_tables() failed: {response['message']}", exc_info=True)
+            logger.error(
+                f"get_info_tables() failed: {response['message']}", exc_info=True
+            )
             return response
 
     def __init__(self, download_folder: Optional[str] = None) -> None:
@@ -441,7 +422,9 @@ class StockHistory:
             raise OSError("Path is not a folder.")
 
         self.download_folder = download_folder
-        logger.info(f"StockHistory.__init__() -> download_folder='{self.download_folder}'")
+        logger.info(
+            f"StockHistory.__init__() -> download_folder='{self.download_folder}'"
+        )
 
     def _build_paths(
         self, period: str = "A", period_date: Optional[str] = None
@@ -527,14 +510,16 @@ class StockHistory:
             >>> os.path.exists(file_path)
             True
         """
-        logger.info(f"_download_stock_history(period='{period}', period_data='{period_data}')")
+        logger.info(
+            f"_download_stock_history(period='{period}', period_data='{period_data}')"
+        )
         url, output_file = self._build_paths(period, period_data)
 
         block_size = 1024**3
 
         logger.debug(f"Downloading from {url} to {output_file}")
         response = requests.get(url, stream=True, verify=_bvmf_cert)
-        
+
         logger.debug(f"Download response status: {response.status_code}")
 
         with open(output_file, "wb") as handle:
@@ -570,8 +555,10 @@ class StockHistory:
             >>> 'record_type' in treated.columns
             True
         """
-        logger.info(f"_treat_data(data.shape={data.shape}, original_names={original_names}, compact={compact})")
-        
+        logger.info(
+            f"_treat_data(data.shape={data.shape}, original_names={original_names}, compact={compact})"
+        )
+
         logger.debug(f"Filtering data for record_type == '1'")
         cot_data = data[data["record_type"] == "1"].copy(deep=True)
         logger.debug(f"Filtered data shape: {cot_data.shape}")
@@ -629,7 +616,9 @@ class StockHistory:
             >>> isinstance(exists, bool)
             True
         """
-        logger.info(f"_check_local_history(period='{period}', period_data='{period_data}')")
+        logger.info(
+            f"_check_local_history(period='{period}', period_data='{period_data}')"
+        )
         _, local_file = self._build_paths(period, period_data)
 
         exists = (
@@ -677,8 +666,10 @@ class StockHistory:
             >>> len(df.columns)  # compact=True by default
             17
         """
-        logger.info(f"get_stock_history(period='{period}', period_data='{period_data}', fetch_mode={fetch_mode}, compact={compact}, original_names={original_names})")
-        
+        logger.info(
+            f"get_stock_history(period='{period}', period_data='{period_data}', fetch_mode={fetch_mode}, compact={compact}, original_names={original_names})"
+        )
+
         if fetch_mode not in [
             FetchModes.LOCAL,
             FetchModes.DOWNLOAD,

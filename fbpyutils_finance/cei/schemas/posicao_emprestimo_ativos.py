@@ -1,4 +1,22 @@
-# fbpyutils_finance/cei/schemas/posicao_emprestimo_ativos.py
+"""
+Processamento de dados de posição de empréstimo de ativos do CEI (Canal Eletrônico do Investidor).
+
+Este módulo fornece funcionalidades para processar arquivos Excel de posição de empréstimo de ativos
+do CEI, extraindo dados das planilhas 'Empréstimo de Ativos' e 'Empréstimos', padronizando colunas e
+realizando conversões de tipos de dados incluindo datas e valores numéricos.
+
+Exemplos:
+    >>> from fbpyutils_finance.cei.schemas.posicao_emprestimo_ativos import process_schema_posicao_emprestimo_ativos
+    >>> # Processar múltiplos arquivos de posição de empréstimo
+    >>> files = ['posicao-2023-01.xlsx', 'posicao-2023-02.xlsx']
+    >>> df = process_schema_posicao_emprestimo_ativos(files)
+    >>> print(df.columns.tolist())
+    ['codigo_produto', 'nome_produto', 'instituicao', 'conta', 'natureza',
+     'contrato', 'modalidade', 'opa', 'liquidacao_antecipada', 'taxa',
+     'comissao', 'data_registro', 'data_vencimento', 'quantidade',
+     'preco_unitario', 'valor_operacao', 'arquivo_origem', 'data_referencia']
+"""
+
 import pandas as pd
 from typing import List, Optional
 
@@ -10,6 +28,8 @@ from .utils import (
     extract_file_info,
     extract_product_id,
 )
+
+from fbpyutils_finance import logger
 
 
 def process_schema_posicao_emprestimo_ativos(
@@ -28,8 +48,29 @@ def process_schema_posicao_emprestimo_ativos(
         Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
                                 asset lending position data. Returns an empty DataFrame if
                                 input_files is empty or no relevant sheets/data are found.
+
+    Examples:
+        >>> # Processar arquivo único
+        >>> df = process_schema_posicao_emprestimo_ativos(['posicao-2023-01.xlsx'])
+        >>> print(len(df.columns))
+        18
+
+        >>> # Processar lista vazia retorna DataFrame vazio
+        >>> df = process_schema_posicao_emprestimo_ativos([])
+        >>> df.empty
+        True
+
+        >>> # Processar arquivo inexistente retorna DataFrame vazio
+        >>> df = process_schema_posicao_emprestimo_ativos(['arquivo_inexistente.xlsx'])
+        >>> df.empty
+        True
     """
+    logger.info(
+        f"process_schema_posicao_emprestimo_ativos: input_files={len(input_files)} files"
+    )
+
     if not input_files:
+        logger.debug("input_files is empty, returning empty DataFrame")
         return pd.DataFrame()
 
     xl_dataframes = []
@@ -60,12 +101,16 @@ def process_schema_posicao_emprestimo_ativos(
     standardized_sheet_name_origin = "Empréstimo_de_Ativos"
 
     for schema_file in input_files:
+        logger.debug(f"Processing file: {schema_file}")
         try:
             schema_file_name, schema_file_date = extract_file_info(schema_file)
+            logger.debug(
+                f"Extracted file info: name={schema_file_name}, date={schema_file_date}"
+            )
 
             if "posicao" not in schema_file_name:
-                print(
-                    f"Warning: Skipping file {schema_file} as it doesn't appear to be a 'posicao' type."
+                logger.warning(
+                    f"Skipping file {schema_file} as it doesn't appear to be a 'posicao' type."
                 )
                 continue
 
@@ -77,10 +122,11 @@ def process_schema_posicao_emprestimo_ativos(
                     xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
 
                     if not xl_table or len(xl_table) < 2:
-                        print(
-                            f"Warning: Sheet '{xl_sheet}' in {schema_file} contains no data or header."
+                        logger.warning(
+                            f"Sheet '{xl_sheet}' in {schema_file} contains no data or header."
                         )
                         continue
+                    logger.debug(f"Sheet '{xl_sheet}' has {len(xl_table)} rows")
 
                     header = xl_table[0]
                     data = xl_table[1:]
@@ -91,16 +137,19 @@ def process_schema_posicao_emprestimo_ativos(
                             xl_dataframe["Produto"] != ""
                         ].copy()
                     else:
-                        print(
-                            f"Warning: 'Produto' column not found in sheet '{xl_sheet}' of {schema_file}."
+                        logger.warning(
+                            f"'Produto' column not found in sheet '{xl_sheet}' of {schema_file}."
                         )
                         continue
 
                     if xl_dataframe.empty:
-                        print(
-                            f"Warning: No data left in sheet '{xl_sheet}' of {schema_file} after filtering."
+                        logger.warning(
+                            f"No data left in sheet '{xl_sheet}' of {schema_file} after filtering."
                         )
                         continue
+                    logger.debug(
+                        f"DataFrame after filtering has {len(xl_dataframe)} rows"
+                    )
 
                     # --- Data Cleaning and Transformation ---
                     column_mapping = {
@@ -133,8 +182,8 @@ def process_schema_posicao_emprestimo_ativos(
                     if not all(
                         col in rename_dict.values() for col in required_raw_cols
                     ):
-                        print(
-                            f"Warning: Missing one or more essential columns in sheet '{xl_sheet}' of {schema_file}. Skipping sheet."
+                        logger.warning(
+                            f"Missing one or more essential columns in sheet '{xl_sheet}' of {schema_file}. Skipping sheet."
                         )
                         continue
 
@@ -177,6 +226,7 @@ def process_schema_posicao_emprestimo_ativos(
                     ].apply(deal_double_spaces)
 
                     # Convert numeric and date columns
+                    logger.debug("Converting numeric and date columns")
                     xl_dataframe["taxa"] = pd.to_numeric(
                         xl_dataframe["taxa_raw"], errors="coerce"
                     )
@@ -200,6 +250,9 @@ def process_schema_posicao_emprestimo_ativos(
                     xl_dataframe["valor_operacao"] = pd.to_numeric(
                         xl_dataframe["valor_operacao_raw"], errors="coerce"
                     )
+                    logger.debug(
+                        "Converted columns: taxa, comissao, data_registro, data_vencimento, quantidade, preco_unitario, valor_operacao"
+                    )
 
                     # Add metadata
                     normalized_sheet_name = SU.normalize_names(
@@ -221,16 +274,30 @@ def process_schema_posicao_emprestimo_ativos(
                     break
 
             if not processed_sheets_in_file:
-                print(
-                    f"Warning: No relevant sheets ({', '.join(xl_sheets_to_process)}) with data found in {schema_file}."
+                logger.warning(
+                    f"No relevant sheets ({', '.join(xl_sheets_to_process)}) with data found in {schema_file}."
+                )
+            else:
+                logger.debug(
+                    f"Processed sheets in {schema_file}: {processed_sheets_in_file}"
                 )
 
         except ValueError as e:
-            print(f"Error processing file {schema_file}: {e}")
+            logger.error(f"Error processing file {schema_file}: {e}", exc_info=True)
         except Exception as e:
-            print(f"An unexpected error occurred while processing {schema_file}: {e}")
+            logger.error(
+                f"An unexpected error occurred while processing {schema_file}: {e}",
+                exc_info=True,
+            )
 
     if not xl_dataframes:
+        logger.debug(
+            "No dataframes to concatenate, returning empty DataFrame with columns"
+        )
         return pd.DataFrame(columns=fields)
 
-    return pd.concat(xl_dataframes, ignore_index=True)
+    result_df = pd.concat(xl_dataframes, ignore_index=True)
+    logger.info(
+        f"process_schema_posicao_emprestimo_ativos: returning DataFrame with {len(result_df)} rows and {len(result_df.columns)} columns"
+    )
+    return result_df

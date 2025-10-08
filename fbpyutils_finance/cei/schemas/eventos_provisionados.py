@@ -61,8 +61,10 @@ def process_schema_eventos_provisionados(
         >>> isinstance(result, pd.DataFrame)
         True
     """
-    logger.info(f"process_schema_eventos_provisionados(input_files={len(input_files)} files)")
-    
+    logger.info(
+        f"process_schema_eventos_provisionados(input_files={len(input_files)} files)"
+    )
+
     if not input_files:
         logger.debug("No input files provided, returning empty DataFrame")
         return pd.DataFrame()  # Return empty DataFrame if no input files
@@ -87,11 +89,15 @@ def process_schema_eventos_provisionados(
         logger.debug(f"Processing file: {schema_file}")
         try:
             schema_file_name, schema_file_date = extract_file_info(schema_file)
-            logger.debug(f"Extracted file info: name='{schema_file_name}', date={schema_file_date}")
+            logger.debug(
+                f"Extracted file info: name='{schema_file_name}', date={schema_file_date}"
+            )
 
             # Basic check if it's an 'eventos' file (adjust if needed)
             if "eventos" not in schema_file_name:
-                logger.warning(f"Skipping file {schema_file} as it doesn't appear to be an 'eventos' type")
+                logger.warning(
+                    f"Skipping file {schema_file} as it doesn't appear to be an 'eventos' type"
+                )
                 print(
                     f"Warning: Skipping file {schema_file} as it doesn't appear to be an 'eventos' type."
                 )
@@ -102,7 +108,9 @@ def process_schema_eventos_provisionados(
             xl_table = _tuple_as_str(tuple(xl_obj.read_sheet_by_index(0)))
 
             if not xl_table or len(xl_table) < 2:
-                logger.warning(f"Skipping file {schema_file} as it contains no data or header")
+                logger.warning(
+                    f"Skipping file {schema_file} as it contains no data or header"
+                )
                 print(
                     f"Warning: Skipping file {schema_file} as it contains no data or header."
                 )
@@ -122,7 +130,9 @@ def process_schema_eventos_provisionados(
                 filtered_len = len(xl_dataframe)
                 logger.debug(f"Filtered out {original_len - filtered_len} total rows")
             else:
-                logger.warning(f"'Preço unitário' column not found in {schema_file}. Cannot filter totals")
+                logger.warning(
+                    f"'Preço unitário' column not found in {schema_file}. Cannot filter totals"
+                )
                 print(
                     f"Warning: 'Preço unitário' column not found in {schema_file}. Cannot filter totals."
                 )
@@ -173,7 +183,7 @@ def process_schema_eventos_provisionados(
                 extract_product_id
             )
             logger.debug("Applied product name transformations")
-            
+
             # 'tipo_produto' and 'tipo_evento' are directly mapped if they exist
             xl_dataframe["previsao_pagamento"] = pd.to_datetime(
                 xl_dataframe["previsao_pagamento_raw"].apply(_str_to_date),
@@ -198,7 +208,9 @@ def process_schema_eventos_provisionados(
             # Add metadata
             xl_dataframe["arquivo_origem"] = schema_file_name
             xl_dataframe["data_referencia"] = schema_file_date
-            logger.debug(f"Added metadata: file='{schema_file_name}', date={schema_file_date}")
+            logger.debug(
+                f"Added metadata: file='{schema_file_name}', date={schema_file_date}"
+            )
 
             # Ensure all expected columns exist before selecting
             for field in fields:
@@ -212,7 +224,9 @@ def process_schema_eventos_provisionados(
             logger.error(f"ValueError processing file {schema_file}: {e}")
             print(f"Error processing file {schema_file}: {e}")
         except Exception as e:
-            logger.error(f"Unexpected error processing file {schema_file}: {e}", exc_info=True)
+            logger.error(
+                f"Unexpected error processing file {schema_file}: {e}", exc_info=True
+            )
             print(f"An unexpected error occurred while processing {schema_file}: {e}")
 
     if not xl_dataframes:
@@ -221,5 +235,7 @@ def process_schema_eventos_provisionados(
 
     logger.debug(f"Concatenating {len(xl_dataframes)} dataframes")
     result = pd.concat(xl_dataframes, ignore_index=True)
-    logger.info(f"process_schema_eventos_provisionados() -> DataFrame with shape {result.shape}")
+    logger.info(
+        f"process_schema_eventos_provisionados() -> DataFrame with shape {result.shape}"
+    )
     return result

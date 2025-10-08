@@ -1,4 +1,22 @@
-# fbpyutils_finance/cei/schemas/posicao_acoes.py
+"""
+Processamento de dados de posição de ações e BDRs do CEI (Canal Eletrônico do Investidor).
+
+Este módulo fornece funcionalidades para processar arquivos Excel de posição de ações e BDRs
+do CEI, extraindo dados das planilhas 'Ações', 'Acoes' e 'BDR', padronizando colunas e
+realizando conversões de tipos de dados.
+
+Exemplos:
+    >>> from fbpyutils_finance.cei.schemas.posicao_acoes import process_schema_posicao_acoes
+    >>> # Processar múltiplos arquivos de posição
+    >>> files = ['posicao-2023-01.xlsx', 'posicao-2023-02.xlsx']
+    >>> df = process_schema_posicao_acoes(files)
+    >>> print(df.columns.tolist())
+    ['codigo_produto', 'nome_produto', 'instituicao', 'conta', 'codigo_isin',
+     'tipo_produto', 'escriturador', 'quantidade', 'quantidade_disponivel',
+     'quantidade_indisponivel', 'motivo', 'preco_unitario', 'valor_operacao',
+     'arquivo_origem', 'data_referencia']
+"""
+
 import pandas as pd
 from typing import List, Optional
 
@@ -9,6 +27,8 @@ from .utils import (
     extract_file_info,
     # extract_product_id is not used here, Código de Negociação is used directly
 )
+
+from fbpyutils_finance import logger
 
 
 def process_schema_posicao_acoes(input_files: List[str]) -> Optional[pd.DataFrame]:
@@ -25,8 +45,27 @@ def process_schema_posicao_acoes(input_files: List[str]) -> Optional[pd.DataFram
         Optional[pd.DataFrame]: A DataFrame containing the consolidated and processed
                                 stock and BDR position data. Returns an empty DataFrame if
                                 input_files is empty or no relevant sheets/data are found.
+
+    Examples:
+        >>> # Processar arquivo único
+        >>> df = process_schema_posicao_acoes(['posicao-2023-01.xlsx'])
+        >>> print(len(df.columns))
+        14
+
+        >>> # Processar lista vazia retorna DataFrame vazio
+        >>> df = process_schema_posicao_acoes([])
+        >>> df.empty
+        True
+
+        >>> # Processar arquivo inexistente retorna DataFrame vazio
+        >>> df = process_schema_posicao_acoes(['arquivo_inexistente.xlsx'])
+        >>> df.empty
+        True
     """
+    logger.info(f"process_schema_posicao_acoes: input_files={len(input_files)} files")
+
     if not input_files:
+        logger.debug("input_files is empty, returning empty DataFrame")
         return pd.DataFrame()
 
     xl_dataframes = []
@@ -52,13 +91,17 @@ def process_schema_posicao_acoes(input_files: List[str]) -> Optional[pd.DataFram
     xl_sheets_to_process = ["Ações", "Acoes", "BDR"]
 
     for schema_file in input_files:
+        logger.debug(f"Processing file: {schema_file}")
         try:
             schema_file_name, schema_file_date = extract_file_info(schema_file)
+            logger.debug(
+                f"Extracted file info: name={schema_file_name}, date={schema_file_date}"
+            )
 
             # Basic check if it's a 'posicao' file
             if "posicao" not in schema_file_name:
-                print(
-                    f"Warning: Skipping file {schema_file} as it doesn't appear to be a 'posicao' type."
+                logger.warning(
+                    f"Skipping file {schema_file} as it doesn't appear to be a 'posicao' type."
                 )
                 continue
 
@@ -70,10 +113,11 @@ def process_schema_posicao_acoes(input_files: List[str]) -> Optional[pd.DataFram
                     xl_table = _tuple_as_str(tuple(xl_obj.read_sheet(xl_sheet)))
 
                     if not xl_table or len(xl_table) < 2:
-                        print(
-                            f"Warning: Sheet '{xl_sheet}' in {schema_file} contains no data or header."
+                        logger.warning(
+                            f"Sheet '{xl_sheet}' in {schema_file} contains no data or header."
                         )
                         continue
+                    logger.debug(f"Sheet '{xl_sheet}' has {len(xl_table)} rows")
 
                     header = xl_table[0]
                     data = xl_table[1:]
@@ -85,16 +129,19 @@ def process_schema_posicao_acoes(input_files: List[str]) -> Optional[pd.DataFram
                             xl_dataframe["Produto"] != ""
                         ].copy()
                     else:
-                        print(
-                            f"Warning: 'Produto' column not found in sheet '{xl_sheet}' of {schema_file}."
+                        logger.warning(
+                            f"'Produto' column not found in sheet '{xl_sheet}' of {schema_file}."
                         )
                         continue  # Skip sheet if essential column is missing
 
                     if xl_dataframe.empty:
-                        print(
-                            f"Warning: No data left in sheet '{xl_sheet}' of {schema_file} after filtering."
+                        logger.warning(
+                            f"No data left in sheet '{xl_sheet}' of {schema_file} after filtering."
                         )
                         continue
+                    logger.debug(
+                        f"DataFrame after filtering has {len(xl_dataframe)} rows"
+                    )
 
                     # --- Data Cleaning and Transformation ---
                     column_mapping = {
@@ -127,8 +174,8 @@ def process_schema_posicao_acoes(input_files: List[str]) -> Optional[pd.DataFram
                     if not all(
                         col in rename_dict.values() for col in required_raw_cols
                     ):
-                        print(
-                            f"Warning: Missing one or more essential columns in sheet '{xl_sheet}' of {schema_file}. Skipping sheet."
+                        logger.warning(
+                            f"Missing one or more essential columns in sheet '{xl_sheet}' of {schema_file}. Skipping sheet."
                         )
                         continue
 
@@ -193,16 +240,30 @@ def process_schema_posicao_acoes(input_files: List[str]) -> Optional[pd.DataFram
                     processed_sheets_in_file.append(xl_sheet)
 
             if not processed_sheets_in_file:
-                print(
-                    f"Warning: No relevant sheets ({', '.join(xl_sheets_to_process)}) with data found in {schema_file}."
+                logger.warning(
+                    f"No relevant sheets ({', '.join(xl_sheets_to_process)}) with data found in {schema_file}."
+                )
+            else:
+                logger.debug(
+                    f"Processed sheets in {schema_file}: {processed_sheets_in_file}"
                 )
 
         except ValueError as e:
-            print(f"Error processing file {schema_file}: {e}")
+            logger.error(f"Error processing file {schema_file}: {e}", exc_info=True)
         except Exception as e:
-            print(f"An unexpected error occurred while processing {schema_file}: {e}")
+            logger.error(
+                f"An unexpected error occurred while processing {schema_file}: {e}",
+                exc_info=True,
+            )
 
     if not xl_dataframes:
+        logger.debug(
+            "No dataframes to concatenate, returning empty DataFrame with columns"
+        )
         return pd.DataFrame(columns=fields)
 
-    return pd.concat(xl_dataframes, ignore_index=True)
+    result_df = pd.concat(xl_dataframes, ignore_index=True)
+    logger.info(
+        f"process_schema_posicao_acoes: returning DataFrame with {len(result_df)} rows and {len(result_df.columns)} columns"
+    )
+    return result_df
