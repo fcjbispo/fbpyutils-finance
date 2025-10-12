@@ -190,7 +190,9 @@ def exchange_rate(x: str, y: str) -> Dict[str, Any]:
         exchange_name = "" if len(exchange_parts) < 2 else " ".join(exchange_parts[1:])
 
         if not all([currency, currency_name, exchange, exchange_name]):
-            logger.error(f"Failed to parse all required fields: currency={currency}, currency_name='{currency_name}', exchange={exchange}, exchange_name='{exchange_name}'")
+            logger.error(
+                f"Failed to parse all required fields: currency={currency}, currency_name='{currency_name}', exchange={exchange}, exchange_name='{exchange_name}'"
+            )
             raise ValueError("Unable to parse exchange rate.")
 
         result["details"] = {
@@ -199,7 +201,9 @@ def exchange_rate(x: str, y: str) -> Dict[str, Any]:
             "unit": currency,
             "exchange_rate": exchange,
         }
-        logger.info(f"exchange_rate() -> SUCCESS: {currency} {currency_from} = {exchange} {currency_to}")
+        logger.info(
+            f"exchange_rate() -> SUCCESS: {currency} {currency_from} = {exchange} {currency_to}"
+        )
 
     except Exception as e:
         logger.error(f"Error in exchange_rate: {e}", exc_info=True)
@@ -306,7 +310,9 @@ def stock_price(x: str, market: Optional[str] = None) -> Dict[str, Any]:
                 .replace(")", "")
                 .split(" "),
             )
-            logger.debug(f"Parsed price: {price_out}, variation: {variation_out}, variation_percent: {variation_percent_out}")
+            logger.debug(
+                f"Parsed price: {price_out}, variation: {variation_out}, variation_percent: {variation_percent_out}"
+            )
 
             variation_percent_out = round(variation_percent_out / 100, 2)
         except Exception as e:
@@ -323,7 +329,9 @@ def stock_price(x: str, market: Optional[str] = None) -> Dict[str, Any]:
         ticker_out, market_out = ticker, market
 
         if not all([ticker_out, market_out]):
-            logger.error(f"Missing market info: ticker={ticker_out}, market={market_out}")
+            logger.error(
+                f"Missing market info: ticker={ticker_out}, market={market_out}"
+            )
             raise ValueError("Unable to parse info: {}".format("Market Info"))
 
         # date_time_info, currency
@@ -365,7 +373,9 @@ def stock_price(x: str, market: Optional[str] = None) -> Dict[str, Any]:
         time = None if len(position_date_info) < 4 else position_date_info[3]
 
         if not all([day, month, year, time]):
-            logger.error(f"Missing date components: day={day}, month={month}, year={year}, time={time}")
+            logger.error(
+                f"Missing date components: day={day}, month={month}, year={year}, time={time}"
+            )
             raise ValueError("Unable to parse info: {}".format("Convert position date"))
 
         date_time_str = "-".join([year, month, day, time])
@@ -392,7 +402,9 @@ def stock_price(x: str, market: Optional[str] = None) -> Dict[str, Any]:
             "trend": trend_out,
             "position_time": date_time_info,
         }
-        logger.info(f"stock_price() -> SUCCESS: {ticker_out} @ {price_out} {currency_out} ({trend_out})")
+        logger.info(
+            f"stock_price() -> SUCCESS: {ticker_out} @ {price_out} {currency_out} ({trend_out})"
+        )
 
     except Exception as e:
         logger.error(f"Error in stock_price: {e}", exc_info=True)

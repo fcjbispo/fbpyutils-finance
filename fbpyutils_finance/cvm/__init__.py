@@ -79,7 +79,7 @@ if _initialization_error:
 # to make them accessible directly via `from fbpyutils_finance import cvm`
 
 # Main client class
-from .cvm_client import CVM
+from .client import CVM
 
 # Header management functions
 from .headers import (

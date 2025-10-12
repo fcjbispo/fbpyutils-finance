@@ -111,7 +111,9 @@ def get_fii_daily_position(parallelize: Optional[bool] = None) -> pd.DataFrame:
     use_multiprocessing = (
         should_parallelize and os.cpu_count() is not None and os.cpu_count() > 1
     )
-    logger.info(f"get_fii_daily_position(parallelize={parallelize}) -> parallelize={should_parallelize}, use_multiprocessing={use_multiprocessing}")
+    logger.info(
+        f"get_fii_daily_position(parallelize={parallelize}) -> parallelize={should_parallelize}, use_multiprocessing={use_multiprocessing}"
+    )
 
     # Use in-memory SQLite database
     db: Optional[sqlite3.Connection] = None

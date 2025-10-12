@@ -25,9 +25,7 @@ Examples:
 >>> print(empty_first)
 None
 """
-"""
-Module containing general utility functions.
-"""
+
 
 import random
 from typing import Any, Dict, List, Optional
@@ -141,7 +139,9 @@ def random_header() -> Dict[str, str]:
         },
     ]
     result = random.choice(_headers)
-    logger.info(f"random_header exit: returning headers with User-Agent={result['User-Agent']}")
+    logger.info(
+        f"random_header exit: returning headers with User-Agent={result['User-Agent']}"
+    )
     return result
 
 
@@ -168,7 +168,9 @@ def is_valid_db_connection(conn: Any) -> bool:
     logger.info(f"is_valid_db_connection entry: conn_type={type(conn)}")
     has_execute = hasattr(conn, "execute")
     is_callable = callable(getattr(conn, "execute")) if has_execute else False
-    logger.debug(f"Decision branch: has_execute={has_execute}, is_callable={is_callable}")
+    logger.debug(
+        f"Decision branch: has_execute={has_execute}, is_callable={is_callable}"
+    )
     result = has_execute and is_callable
     logger.info(f"is_valid_db_connection exit: returning {result}")
     return result

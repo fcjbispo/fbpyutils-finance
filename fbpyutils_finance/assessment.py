@@ -20,6 +20,7 @@ Examples:
 0  PETR4        4285.714286        142.857143
 1  VALE3        5714.285714         95.238095
 """
+
 import pandas as pd
 import numpy as np
 
@@ -69,21 +70,23 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
         0  PETR4        4285.714286        142.857143
         1  VALE3        5714.285714         95.238095
     """
-    logger.info(f"get_investment_table entry: df_shape={df.shape}, investment_amount={investment_amount}")
+    logger.info(
+        f"get_investment_table entry: df_shape={df.shape}, investment_amount={investment_amount}"
+    )
 
     def adjust_profit_loss(row):
         """
         Adjusts the absolute profit/loss value by scaling it with the row index and magnitude.
-    
+
         This internal helper function normalizes profit/loss values for weighting by adding the row index (1-based) to the scaled absolute profit/loss.
         Scaling uses the order of magnitude to prevent large values from dominating the weights.
-    
+
         Args:
             row (pd.Series): A row from the DataFrame containing 'Profit/Loss' and index.
-    
+
         Returns:
             float: Adjusted value for weighting, or np.nan if invalid.
-    
+
         Examples:
         >>> import pandas as pd
         >>> import numpy as np
@@ -101,7 +104,7 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
             return np.nan
         abs_pl = abs(abs_pl)
         logger.debug(f"adjust_profit_loss entry for index {index}: abs_pl={abs_pl}")
-    
+
         if abs_pl == 0:
             digits = 0
             logger.debug(f"Decision branch: abs_pl==0, digits=0")
@@ -113,10 +116,12 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
                 digits = np.floor(np.log10(abs_pl)) + 1
                 logger.debug(f"Calculated digits={digits} for abs_pl={abs_pl}")
             except ValueError as e:
-                logger.error(f"Error calculating digits for abs_pl={abs_pl}: {e}", exc_info=True)
+                logger.error(
+                    f"Error calculating digits for abs_pl={abs_pl}: {e}", exc_info=True
+                )
                 return np.nan
         digits = int(digits)
-    
+
         divisor = 10.0**digits
         result = (index + 1) + (abs_pl / divisor)
         logger.debug(f"adjust_profit_loss exit for index {index}: result={result}")
@@ -128,7 +133,9 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
     # Check for missing columns
     missing_columns = required_columns - set(df.columns)
     if missing_columns:
-        logger.error(f"Missing required columns: {', '.join(missing_columns)}", exc_info=True)
+        logger.error(
+            f"Missing required columns: {', '.join(missing_columns)}", exc_info=True
+        )
         raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
 
     # Ensure numeric types for calculation columns
@@ -141,11 +148,15 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
     df.dropna(subset=["Price", "Quantity", "Average Price"], inplace=True)
     dropped_rows = initial_rows - len(df)
     if dropped_rows > 0:
-        logger.warning(f"Dropped {dropped_rows} rows due to NaN values in essential columns. Remaining: {len(df)}")
+        logger.warning(
+            f"Dropped {dropped_rows} rows due to NaN values in essential columns. Remaining: {len(df)}"
+        )
         logger.debug(f"Decision branch: dropped_rows={dropped_rows} > 0")
 
     if df.empty:
-        logger.warning("No valid data after cleaning; returning empty DataFrame with expected columns")
+        logger.warning(
+            "No valid data after cleaning; returning empty DataFrame with expected columns"
+        )
         logger.info(f"get_investment_table exit: empty DataFrame due to no valid data")
         # Return empty DataFrame with expected columns if all rows had NaNs
         # Return empty DataFrame with the final expected columns
@@ -163,7 +174,9 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
 
     logger.debug("State mutation: Calculating Profit/Loss column")
     df["Profit/Loss"] = (df["Price"] - df["Average Price"]) * df["Quantity"]
-    logger.debug(f"Calculated Profit/Loss for {len(df)} assets. Range: {df['Profit/Loss'].min():.2f} to {df['Profit/Loss'].max():.2f}")
+    logger.debug(
+        f"Calculated Profit/Loss for {len(df)} assets. Range: {df['Profit/Loss'].min():.2f} to {df['Profit/Loss'].max():.2f}"
+    )
 
     # this function sort a dataframe by a column in descent order and reindex from the top to bottom
     logger.debug("Decision branch: Sorting DataFrame by Profit/Loss descending")
@@ -172,9 +185,13 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
     logger.debug("State mutation: DataFrame sorted and reindexed")
 
     # Calculate Adjusted Profit/Loss by adding the column 'Profit/Loss' the value of the row index plus 1
-    logger.debug("State mutation: Calculating Adjusted Profit/Loss using adjust_profit_loss")
+    logger.debug(
+        "State mutation: Calculating Adjusted Profit/Loss using adjust_profit_loss"
+    )
     df["Adjusted Profit/Loss"] = df.apply(adjust_profit_loss, axis=1)
-    logger.debug(f"Adjusted Profit/Loss range: {df['Adjusted Profit/Loss'].min():.2f} to {df['Adjusted Profit/Loss'].max():.2f}")
+    logger.debug(
+        f"Adjusted Profit/Loss range: {df['Adjusted Profit/Loss'].min():.2f} to {df['Adjusted Profit/Loss'].max():.2f}"
+    )
 
     # Calculate Weight
     logger.debug("Decision branch: Computing total adjusted profit/loss")
@@ -187,19 +204,25 @@ def get_investment_table(df: pd.DataFrame, investment_amount: float) -> pd.DataF
     # Calculate Investment Value (distribute total value according to proportion)
     logger.debug("State mutation: Calculating Investment Value based on proportions")
     df["Investment Value"] = df["Proportion"] * investment_amount
-    logger.info(f"Investment allocation completed. Total allocated: {df['Investment Value'].sum():.2f}")
+    logger.info(
+        f"Investment allocation completed. Total allocated: {df['Investment Value'].sum():.2f}"
+    )
 
     # Calculate Quantity to Buy (handle potential division by zero if Price is 0)
     logger.debug("State mutation: Calculating Quantity to Buy, handling zero prices")
     zero_prices_count = (df["Price"] == 0).sum()
     if zero_prices_count > 0:
-        logger.warning(f"Found {zero_prices_count} assets with zero price; Quantity to Buy set to 0")
+        logger.warning(
+            f"Found {zero_prices_count} assets with zero price; Quantity to Buy set to 0"
+        )
     df["Quantity to Buy"] = df.apply(
         lambda row: row["Investment Value"] / row["Price"] if row["Price"] != 0 else 0,
         axis=1,
     )
 
-    logger.info(f"get_investment_table exit: returning DataFrame with {len(df)} rows, total investment {investment_amount}")
+    logger.info(
+        f"get_investment_table exit: returning DataFrame with {len(df)} rows, total investment {investment_amount}"
+    )
     return df[
         [
             "Ticker",

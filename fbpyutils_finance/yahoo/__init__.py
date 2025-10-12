@@ -5,7 +5,7 @@ Purpose: This module provides functionality to retrieve financial data from Yaho
 
 Main contents:
 - YahooCurrencyDataProvider (class): Provides cryptocurrency or currency exchange rate data
-- YahooStockDataProvider (class): Provides stock data including dividend payments 
+- YahooStockDataProvider (class): Provides stock data including dividend payments
 - stock_price() (function): Get current stock price from Yahoo Finance search
 - _reorder_columns() (function): Reorder DataFrame columns for better presentation
 - _makeurl(), _ysearch() (functions): Internal Yahoo Finance search utilities
@@ -23,26 +23,10 @@ True
 >>> isinstance(price['details']['price'], float)
 True
 """
-
-# ---
-# jupyter:
-#   jupytext:
-#     text_representation:
-#       extension: .py
-#       format_name: light
-#       format_version: '1.5'
-#       jupytext_version: 1.14.7
-#   kernelspec:
-#     display_name: fbpyutils-finance--TrezB8H
-#     language: python
-#     name: python3
-# ---
-
 import sys
 
 sys.path.insert(0, "..")
 
-# +
 from fbpyutils import debug
 
 
@@ -92,7 +76,9 @@ def _reorder_columns(df, ticker):
         .copy()
         .reset_index(drop=True)
     )
-    logger.debug(f"_reorder_columns() -> DataFrame shape: {result.shape} (original: {original_shape})")
+    logger.debug(
+        f"_reorder_columns() -> DataFrame shape: {result.shape} (original: {original_shape})"
+    )
     return result
 
 
@@ -182,7 +168,9 @@ class YahooCurrencyDataProvider:
         currency_to = self.params["currency_to"]
         start = self.params["start"]
         end = self.params["end"]
-        logger.debug(f"Fetching data for {currency_from} to {currency_to} from {start} to {end}")
+        logger.debug(
+            f"Fetching data for {currency_from} to {currency_to} from {start} to {end}"
+        )
 
         ticker = currency_from.upper() + currency_to.upper()
         logger.debug(f"Currency ticker: {ticker}")
@@ -191,7 +179,9 @@ class YahooCurrencyDataProvider:
         logger.debug(f"Downloading data for {_ticker}")
         data = yf.download(_ticker, start=start, end=end)
         result = _reorder_columns(data, ticker)
-        logger.info(f"YahooCurrencyDataProvider.get_data() -> DataFrame with shape {result.shape}")
+        logger.info(
+            f"YahooCurrencyDataProvider.get_data() -> DataFrame with shape {result.shape}"
+        )
         return result
 
 
@@ -243,7 +233,9 @@ class YahooStockDataProvider:
                 start_dt = pd.to_datetime(params["start"])
                 end_dt = pd.to_datetime(params["end"])
                 if end_dt <= start_dt:
-                    logger.debug(f"End date {end_dt} is not after start date {start_dt}")
+                    logger.debug(
+                        f"End date {end_dt} is not after start date {start_dt}"
+                    )
                     result = False
                 else:
                     result = True
@@ -297,7 +289,9 @@ class YahooStockDataProvider:
         start = self.params["start"]
         end = self.params["end"]
         market = self.params["market"].upper()
-        logger.debug(f"Parameters: ticker={ticker}, market={market}, start={start}, end={end}")
+        logger.debug(
+            f"Parameters: ticker={ticker}, market={market}, start={start}, end={end}"
+        )
 
         ticker = ticker.upper()
 
@@ -337,14 +331,18 @@ class YahooStockDataProvider:
                 filtered_dividends = None
 
             data = filtered_dividends
-            logger.debug(f"Retrieved dividend data with {len(data) if data is not None else 0} entries")
+            logger.debug(
+                f"Retrieved dividend data with {len(data) if data is not None else 0} entries"
+            )
         else:
             logger.debug("Fetching stock price data")
             data = yf.download(ticker, start=start, end=end)
             logger.debug(f"Downloaded price data with shape {data.shape}")
 
         result = _reorder_columns(data, ticker)
-        logger.info(f"YahooStockDataProvider.get_data() -> DataFrame with shape {result.shape}")
+        logger.info(
+            f"YahooStockDataProvider.get_data() -> DataFrame with shape {result.shape}"
+        )
         return result
 
 
@@ -390,7 +388,9 @@ def _ysearch(x: str) -> requests.models.Response:
     """
     logger.info(f"_ysearch(x='{x}')")
     h = random_header()
-    logger.debug(f"Using random headers: {dict(list(h.items())[:2])}...")  # Log first 2 header items
+    logger.debug(
+        f"Using random headers: {dict(list(h.items())[:2])}..."
+    )  # Log first 2 header items
 
     s = requests.Session()
     url = _makeurl(x)

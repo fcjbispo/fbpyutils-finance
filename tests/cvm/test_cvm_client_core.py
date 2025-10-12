@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from unittest import mock
 
-from fbpyutils_finance.cvm.cvm_client import CVM
+from fbpyutils_finance.cvm.client import CVM
 
 @pytest.fixture
 def headers_df():
