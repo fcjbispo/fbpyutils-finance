@@ -35,7 +35,7 @@ import requests
 import datetime
 from bs4 import BeautifulSoup
 
-from fbpyutils_finance import random_header
+from fbpyutils_finance.utils import random_header
 from fbpyutils_finance import logger
 
 import pandas as pd
