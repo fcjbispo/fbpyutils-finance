@@ -78,11 +78,11 @@ def test_check_local_history_file_exists_not_zip(temp_download_folder, dummy_txt
     mocker.patch.object(StockHistory, '_build_paths', return_value=('dummy_url', expected_filepath))
 
     # Mock F.mime_type to return something else
-    # mocker.patch('fbpyutils.file.mime_type', return_value='text/plain')
+    mocker.patch('fbpyutils.file.mime_type', return_value='text/plain')
 
     assert stock_history._check_local_history(period, period_data) is False
     StockHistory._build_paths.assert_called_once_with(period, period_data)
-    # F.mime_type.assert_called_once_with(expected_filepath)
+    F.mime_type.assert_called_once_with(expected_filepath)
 
 def test_check_local_history_path_is_directory(temp_download_folder, dummy_directory, mocker):
     """
