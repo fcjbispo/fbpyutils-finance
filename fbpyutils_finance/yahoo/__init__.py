@@ -24,6 +24,8 @@ True
 True
 """
 import sys
+import logging
+from datetime import datetime
 
 sys.path.insert(0, "..")
 
@@ -32,7 +34,6 @@ from fbpyutils import debug
 
 from typing import Dict
 import requests
-import datetime
 from bs4 import BeautifulSoup
 
 from fbpyutils_finance.utils import random_header
@@ -69,6 +70,13 @@ def _reorder_columns(df, ticker):
     """
     logger.debug(f"_reorder_columns(ticker='{ticker}')")
     original_shape = df.shape
+    
+    # Handle MultiIndex columns (yfinance format)
+    if isinstance(df.columns, pd.MultiIndex):
+        # Convert MultiIndex columns to regular columns by joining with underscore
+        df = df.copy()
+        df.columns = ['_'.join(col).strip() for col in df.columns.values]
+    
     df["Ticker"] = ticker
     df["Date"] = df.index
     result = (
@@ -401,105 +409,111 @@ def _ysearch(x: str) -> requests.models.Response:
     return r
 
 
-def stock_price(x: str, market: str = None) -> Dict:
+def stock_price(ticker: str) -> dict:
     """
-    Performs a Yahoo search for the current price of the supplied ticker in the default market.
+    Fetches the current stock price for a given ticker using yfinance.
 
-    Parameters:
-        x (str): The ticker to search for the current price.
-        market (str, Optional): The name of the market on which the ticker will be searched.
+    This function retrieves the current stock price using the yfinance library,
+    which provides a reliable and stable way to access Yahoo Finance data.
+
+    Args:
+        ticker (str): The stock ticker symbol (e.g., 'AAPL', 'GOOGL').
 
     Returns:
-        dict: A standard dictionary with the stock price and information for the supplied ticker.
+        dict: A dictionary containing the stock price information with the following keys:
+            - 'info' (str): Information about the data type ('STOCK PRICE')
+            - 'source' (str): Data source ('YAHOO')
+            - 'status' (str): Status of the request ('OK' or 'ERROR')
+            - 'details' (dict): Additional details including:
+                - 'ticker' (str): The ticker symbol
+                - 'price' (float): Current stock price
+                - 'currency' (str): Currency of the stock price
+                - 'market' (str): Market where the stock is traded
+                - 'timestamp' (str): Timestamp of the data fetch
+                - 'error_message' (str): Error message if status is 'ERROR'
 
-    Examples:
-        >>> price = stock_price('PETR4', 'BVMF')
-        >>> isinstance(price, dict)
-        True
-        >>> 'status' in price
-        True
-        >>> 'details' in price
-        True
-        >>> # Test with invalid ticker
-        >>> result = stock_price('')
-        >>> result['status'] == 'ERROR'
-        True
-    """
-    logger.info(f"stock_price(x='{x}', market='{market}')")
-    result = {
-        "info": "STOCK PRICE",
-        "source": "YAHOO",
-        "status": "SUCCESS",
-        "details": {},
-    }
+    Raises:
+        ValueError: If the ticker is invalid or if yfinance fails to retrieve data.
+        Exception: If there is an unexpected error during the data fetch.
 
-    step = "Init"
-    logger.debug(f"Starting stock price search, step: {step}")
-    try:
-        if not x:
-            logger.error("No ticker provided")
-            raise ValueError("Ticker is required")
-
-        ticker = x.upper()
-        logger.debug(f"Processing ticker: {ticker}")
-
-        response = _ysearch(ticker)
-
-        if response.status_code != 200:
-            logger.error(f"Yahoo search failed with status {response.status_code}")
-            raise ValueError(f"Yahoo Search Fail: {ticker}, {response.status_code}")
-
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        step = "Search: ticker name, market, currency"
-        logger.debug(f"Searching for ticker info, step: {step}")
-
-        element1 = soup.find("div", id="mrt-node-Lead-5-QuoteHeader")
-        element2 = element1.find("h1", class_="D(ib) Fz(18px)")
-        element3 = element1.find("div", class_="C($tertiaryColor) Fz(12px)")
-
-        if all([element2, element3]):
-            ticker_name, ticker = [
-                e.strip() for e in element2.text.replace(")", "").split("(")
-            ]
-            logger.debug(f"Found ticker info: name='{ticker_name}', ticker='{ticker}'")
-
-            elements = [e.upper() for e in element3.text.replace(" ", "|").split("|")]
-            market, currency = elements[0], elements[-1]
-            logger.debug(f"Market: {market}, Currency: {currency}")
-        else:
-            logger.error(f"Failed to find ticker elements at step: {step}")
-            raise ValueError(f"Yahoo Search Fail on step {step}!")
-
-        step = "Search: price"
-        logger.debug(f"Searching for price, step: {step}")
-        element4 = element1.find("fin-streamer", class_="Fw(b) Fz(36px) Mb(-4px) D(ib)")
-
-        if all([element4]):
-            price = float(element4.text)
-            logger.debug(f"Found price: {price}")
-        else:
-            logger.error(f"Failed to find price element at step: {step}")
-            raise ValueError(f"Yahoo Search Fail on step {step}!")
-
-        result["details"] = {
-            "market": market,
-            "ticker": ticker,
-            "name": ticker_name,
-            "currency": currency,
-            "price": price,
-            "variation": None,
-            "variation_percent": None,
-            "trend": None,
-            "position_time": datetime.datetime.now(),
+    Example:
+        >>> price_info = stock_price('AAPL')
+        >>> print(price_info)
+        {
+            'info': 'STOCK PRICE',
+            'source': 'YAHOO',
+            'status': 'OK',
+            'details': {
+                'ticker': 'AAPL',
+                'price': 150.25,
+                'currency': 'USD',
+                'market': 'US',
+                'timestamp': '2023-11-15T10:30:00Z',
+                'error_message': None
+            }
         }
-        logger.info(f"stock_price() -> SUCCESS: {ticker} @ {price} {currency}")
+    """
+    import yfinance as yf
 
+    logger = logging.getLogger(__name__)
+    logger.debug(f"Fetching stock price for ticker: {ticker}")
+
+    # Validate input
+    if not ticker or not isinstance(ticker, str):
+        logger.error("Invalid ticker provided")
+        raise ValueError("Ticker must be a non-empty string")
+
+    ticker = ticker.upper()
+    logger.debug(f"Processing ticker: {ticker}")
+
+    try:
+        # Create Ticker object
+        stock = yf.Ticker(ticker)
+        
+        # Get current price information
+        info = stock.info
+        
+        # Check if we got valid data
+        if not info or 'regularMarketPrice' not in info:
+            logger.error(f"No price data found for ticker {ticker}")
+            raise ValueError(f"No price data found for ticker {ticker}")
+        
+        price = info['regularMarketPrice']
+        currency = info.get('currency', 'USD')
+        market = info.get('market', 'US')
+        
+        logger.debug(f"Retrieved price: {price}, currency: {currency}, market: {market}")
+        
+        result = {
+            "info": "STOCK PRICE",
+            "source": "YAHOO",
+            "status": "OK",
+            "details": {
+                "ticker": ticker,
+                "price": float(price),
+                "currency": currency,
+                "market": market,
+                "timestamp": datetime.now().isoformat(),
+                "error_message": None,
+            },
+        }
+
+        logger.info(f"Successfully fetched stock price for {ticker}: {price}")
+        return result
+        
     except Exception as e:
-        logger.error(f"Error in stock_price at step {step}: {e}", exc_info=True)
-        print(e, step)
-        m = debug.debug_info(e)
-        result["status"] = "ERROR"
-        result["details"] = {"error_message": m}
-
-    return result
+        logger.error(f"Error fetching stock price for {ticker}: {e}")
+        result = {
+            "info": "STOCK PRICE",
+            "source": "YAHOO",
+            "status": "ERROR",
+            "details": {
+                "ticker": ticker,
+                "price": None,
+                "currency": None,
+                "market": None,
+                "timestamp": datetime.now().isoformat(),
+                "error_message": str(e),
+            },
+        }
+        return result
