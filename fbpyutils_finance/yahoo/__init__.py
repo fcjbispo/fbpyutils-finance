@@ -377,38 +377,6 @@ def _makeurl(x):
     return url
 
 
-def _ysearch(x: str) -> requests.models.Response:
-    """
-    Performs a default Yahoo search using custom headers.
-
-    Parameters:
-        x (str): The search query string
-
-    Returns:
-        http response: An HTTP response with the HTML page resulting from the search query.
-
-    Examples:
-        >>> response = _ysearch('PETR4.SA')
-        >>> response.status_code
-        200
-        >>> 'PETR4' in response.text
-        True
-    """
-    logger.info(f"_ysearch(x='{x}')")
-    h = random_header()
-    logger.debug(
-        f"Using random headers: {dict(list(h.items())[:2])}..."
-    )  # Log first 2 header items
-
-    s = requests.Session()
-    url = _makeurl(x)
-    logger.debug(f"Making request to: {url}")
-    r = s.get(url, headers=h)
-    logger.info(f"_ysearch() -> Response(status_code={r.status_code})")
-
-    return r
-
-
 def stock_price(ticker: str) -> dict:
     """
     Fetches the current stock price for a given ticker using yfinance.

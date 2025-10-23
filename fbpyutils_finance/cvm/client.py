@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Tuple, Any
 
 # Import necessary components from the project structure
 import fbpyutils_finance as FI
+import fbpyutils_finance.utils as FIU
 import fbpyutils.file as FU
 from fbpyutils.debug import debug_info
 
@@ -118,7 +119,7 @@ class CVM:
 
     def _initialize_catalog_tables(self):
         """Creates the necessary tables in the catalog database if they don't exist."""
-        if not FI.is_valid_db_connection(self.CATALOG):
+        if not FIU.is_valid_db_connection(self.CATALOG):
             print("Error: Cannot initialize tables, database connection is not valid.")
             return
         try:
@@ -193,7 +194,7 @@ class CVM:
             Optional[pd.DataFrame]: DataFrame containing the catalog data, or None if the table
                                     doesn't exist or an error occurs. Converts integer booleans back.
         """
-        if not FI.is_valid_db_connection(self.CATALOG):
+        if not FIU.is_valid_db_connection(self.CATALOG):
             print("Error: Catalog database connection is not valid.")
             return None
         try:
@@ -260,7 +261,7 @@ class CVM:
         processed_metadata = []
         db_ops = []  # Store (sql_template, row_count)
 
-        if not FI.is_valid_db_connection(self.CATALOG):
+        if not FIU.is_valid_db_connection(self.CATALOG):
             raise ConnectionError("Catalog database connection is not valid.")
 
         try:
@@ -467,7 +468,7 @@ class CVM:
 
         except Exception as E:
             info = debug_info(E)
-            if FI.is_valid_db_connection(self.CATALOG):
+            if FIU.is_valid_db_connection(self.CATALOG):
                 self.CATALOG.rollback()  # Rollback any uncommitted changes on error
             raise ValueError(
                 f"Failed to update CVM catalog at step {step}: {E} ({info})"
@@ -475,7 +476,7 @@ class CVM:
         finally:
             # Ensure staging table is dropped even if errors occurred mid-process
             try:
-                if FI.is_valid_db_connection(self.CATALOG):
+                if FIU.is_valid_db_connection(self.CATALOG):
                     cursor = self.CATALOG.cursor()
                     cursor.execute(f"DROP TABLE IF EXISTS {self.REMOTE_FILES_TABLE};")
                     self.CATALOG.commit()
@@ -485,7 +486,7 @@ class CVM:
                 )
 
             # Ensure main connection is still valid after potential errors
-            if not FI.is_valid_db_connection(self.CATALOG):
+            if not FIU.is_valid_db_connection(self.CATALOG):
                 print("Warning: Catalog DB connection became invalid during update.")
 
     def get_cvm_files_to_process(
@@ -515,7 +516,7 @@ class CVM:
             ConnectionError: If the database connection is invalid.
         """
         step = "QUERYING CATALOG FOR FILES TO PROCESS"
-        if not FI.is_valid_db_connection(self.CATALOG):
+        if not FIU.is_valid_db_connection(self.CATALOG):
             raise ConnectionError("Catalog database connection is not valid.")
 
         try:
@@ -643,7 +644,7 @@ class CVM:
             ConnectionError: If the database connection is invalid.
         """
         step = "MARKING FILES AS UPDATED IN CATALOG"
-        if not FI.is_valid_db_connection(self.CATALOG):
+        if not FIU.is_valid_db_connection(self.CATALOG):
             raise ConnectionError("Catalog database connection is not valid.")
 
         if not processed_files_info:
